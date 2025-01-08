@@ -1,6 +1,8 @@
 import { baseUrl } from 'app/sitemap'
 
-export default function robots() {
+import type { MetadataRoute } from 'next'
+ 
+export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
