@@ -97,7 +97,9 @@ export default function Page() {
         </p>
       </div>
 
-      <h1 className="mt-8 text-xl font-semibold tracking-tighter">Blog Post</h1>
+      <h1 className="mt-12 text-xl font-semibold tracking-tighter">
+        Blog Post
+      </h1>
       <div className="my-8">
         <BlogPosts />
       </div>
