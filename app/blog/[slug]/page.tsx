@@ -3,6 +3,7 @@ import { CustomMDX } from "app/components/mdx";
 import { formatDate, getBlogPosts } from "app/blog/utils";
 import { baseUrl } from "app/sitemap";
 import { ViewCount } from "app/components/view-count";
+import { Suspense } from "react";
 
 export async function generateStaticParams() {
   let posts = getBlogPosts();
@@ -90,7 +91,9 @@ export default async function Blog({ params }) {
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
           {formatDate(post.metadata.publishedAt)}
         </p>
-        <ViewCount slug={post.slug} />
+        <Suspense>
+          <ViewCount slug={post.slug} />
+        </Suspense>
       </div>
       <article className="prose">
         <CustomMDX source={post.content} />
