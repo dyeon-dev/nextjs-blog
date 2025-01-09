@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { CustomMDX } from "app/components/mdx";
 import { formatDate, getBlogPosts } from "app/blog/utils";
 import { baseUrl } from "app/sitemap";
-import { neon } from "@neondatabase/serverless";
+import { ViewCount } from "app/components/view-count";
 
 export async function generateStaticParams() {
   let posts = getBlogPosts();
@@ -52,50 +52,8 @@ export function generateMetadata({ params }) {
   };
 }
 
-// serverless neon 연결
-const sql = neon(`${process.env.DATABASE_URL}`);
-// 조회수 데이터
-export async function getViewsCount(): Promise<
-  { slug: string; count: number }[]
-> {
-  if (!process.env.DATABASE_URL) {
-    return [];
-  }
-
-  const rows = await sql("SELECT slug, count FROM views");
-
-  return rows.map((row: { slug: string; count: number }) => ({
-    slug: row.slug,
-    count: row.count,
-  }));
-}
-// 조회수 증가
-const incrementView = async (slug: string) => {
-  "use server";
-
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is not defined");
-  }
-
-  // 'views' 테이블에 slug를 삽입하거나 count를 업데이트
-  await sql(
-    `
-  INSERT INTO views (slug, count)
-  VALUES ($1, 1)
-  ON CONFLICT (slug) DO UPDATE SET count = views.count + 1
-  `,
-    [slug]
-  );
-};
-
 export default async function Blog({ params }) {
   let post = getBlogPosts().find((post) => post.slug === params.slug);
-
-  await incrementView(params.slug);
-
-  const views = await getViewsCount();
-  const view = views.find((view) => view.slug === params.slug);
-  const count = view ? view.count : 0;
 
   if (!post) {
     notFound();
@@ -132,9 +90,7 @@ export default async function Blog({ params }) {
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
           {formatDate(post.metadata.publishedAt)}
         </p>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          {count.toLocaleString()} views
-        </p>
+        <ViewCount slug={post.slug} />
       </div>
       <article className="prose">
         <CustomMDX source={post.content} />
