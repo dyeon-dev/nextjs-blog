@@ -22,6 +22,7 @@ export async function getViewsCount(): Promise<
     count: row.count,
   }));
 }
+
 // 조회수 증가
 export const incrementView = async (slug: string) => {
   
