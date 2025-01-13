@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from "./components/footer";
 import { baseUrl } from "./sitemap";
 import { themeEffect } from "utils/themeEffect";
+import TocBanner from "./components/toc-banner";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -60,13 +61,19 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased max-w-xl mx-4 mt-8 lg:mx-auto">
-        <main className="flex-auto min-w-0 mt-6 flex flex-col px-2 md:px-0">
-          <Navbar />
-          {children}
-          <Footer />
-          <Analytics />
-          <SpeedInsights />
+
+      <body className="antialiased">
+        <main className="flex flex-row justify-center max-w-screen-xl mx-auto px-4 lg:px-8 mt-8">
+          <div className="flex-auto min-w-0 flex flex-col px-4 lg:px-6">
+            <Navbar />
+            {children}
+            <Footer />
+            <Analytics />
+            <SpeedInsights />
+          </div>
+          <aside className="hidden lg:block w-64 ml-8">
+            <TocBanner />
+          </aside>
         </main>
       </body>
     </html>

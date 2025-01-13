@@ -8,6 +8,7 @@ type Metadata = {
   image?: string
 }
 
+// 파일 콘텐츠에서 Frontmatter(메타데이터 블록)와 본문을 추출
 function parseFrontmatter(fileContent: string) {
   let frontmatterRegex = /---\s*([\s\S]*?)\s*---/
   let match = frontmatterRegex.exec(fileContent)
@@ -26,10 +27,12 @@ function parseFrontmatter(fileContent: string) {
   return { metadata: metadata as Metadata, content }
 }
 
+// 지정된 디렉토리에서 .mdx 확장자를 가진 파일만 필터링
 function getMDXFiles(dir) {
   return fs.readdirSync(dir).filter((file) => path.extname(file) === '.mdx')
 }
 
+// 파일 경로에서 내용을 읽어와 Frontmatter와 본문을 파싱
 function readMDXFile(filePath) {
   let rawContent = fs.readFileSync(filePath, 'utf-8')
   return parseFrontmatter(rawContent)

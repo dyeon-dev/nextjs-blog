@@ -5,6 +5,7 @@ import { baseUrl } from "app/sitemap";
 import { ViewCount } from "app/components/view-count";
 import { Suspense } from "react";
 
+// 정적 사이트 생성(SSG)을 위해 모든 블로그 게시물의 slug를 반환
 export async function generateStaticParams() {
   let posts = getBlogPosts();
 
@@ -13,6 +14,7 @@ export async function generateStaticParams() {
   }));
 }
 
+// SEO 및 Open Graph 데이터를 생성하여 블로그 게시물이 검색 엔진에서 적절히 표시되도록 설정
 export function generateMetadata({ params }) {
   let post = getBlogPosts().find((post) => post.slug === params.slug);
   if (!post) {
@@ -53,6 +55,7 @@ export function generateMetadata({ params }) {
   };
 }
 
+// 블로그 게시물의 상세 페이지를 렌더링
 export default async function Blog({ params }) {
   let post = getBlogPosts().find((post) => post.slug === params.slug);
 
@@ -62,6 +65,7 @@ export default async function Blog({ params }) {
 
   return (
     <section className="mt-16">
+      {/* 검색 엔진이 블로그의 컨텐츠를 잘 해석할 수 있도록 돕는 포맷 */}
       <script
         type="application/ld+json"
         suppressHydrationWarning
@@ -79,7 +83,7 @@ export default async function Blog({ params }) {
             url: `${baseUrl}/blog/${post.slug}`,
             author: {
               "@type": "Person",
-              name: "My Portfolio",
+              name: "dyeon-dev",
             },
           }),
         }}
