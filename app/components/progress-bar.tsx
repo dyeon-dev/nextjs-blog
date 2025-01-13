@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export default function ReadingProgressBar() {
+export default function ProgressBar() {
   const [width, setWidth] = useState(0);
 
   const scrollHeight = () => {

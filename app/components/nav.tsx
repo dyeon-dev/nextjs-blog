@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ThemeSwitcher } from "./theme-switcher";
-import ReadingProgressBar from "./ReadingProgressBar";
+import ProgressBar from "./progress-bar";
 
 const navItems = {
   "/": {
@@ -42,7 +42,7 @@ export function Navbar() {
         <ThemeSwitcher />
       </div>
 
-      <ReadingProgressBar />
+      <ProgressBar />
     </aside>
   );
 }
