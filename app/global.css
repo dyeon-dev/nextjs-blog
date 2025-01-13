@@ -45,21 +45,18 @@ html {
   cursor: pointer;
 }
 
-.anchor:hover {
+.anchor:hover,
+.prose *:hover > .anchor {
   @apply visible;
-}
-
-.prose a {
-  @apply underline transition-all decoration-neutral-400 dark:decoration-neutral-600 underline-offset-2 decoration-[0.1em];
 }
 
 .prose .anchor:after {
   @apply text-neutral-300 dark:text-neutral-700;
-  content: '#';
+  content: "#";
 }
 
-.prose *:hover > .anchor {
-  @apply visible;
+.prose a {
+  @apply underline transition-all decoration-neutral-400 dark:decoration-neutral-600 underline-offset-2 decoration-[0.1em];
 }
 
 .prose pre {
@@ -94,7 +91,7 @@ html {
 }
 
 .prose h2 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
+  @apply text-2xl font-medium tracking-tight mt-6 mb-2;
 }
 
 .prose h3 {
@@ -117,6 +114,16 @@ html {
   @apply list-decimal pl-6;
 }
 
+.prose blockquote {
+  @apply border-l-4 border-neutral-300 dark:border-neutral-700 pl-4 text-neutral-600 dark:text-neutral-400;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose blockquote p {
+  @apply mb-0; /* blockquote 내 문단 간격 제거 */
+}
+
 .prose > :first-child {
   /* Override removing top margin, causing layout shift */
   margin-top: 1.25em !important;
@@ -133,18 +140,27 @@ pre {
 }
 
 /* Remove Safari input shadow on mobile */
-input[type='text'],
-input[type='email'] {
+input[type="text"],
+input[type="email"] {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
 }
 
 table {
+  @apply table-auto border-collapse border border-neutral-300 dark:border-neutral-700;
   display: block;
   max-width: fit-content;
   overflow-x: auto;
   white-space: nowrap;
+}
+
+thead th {
+  @apply bg-neutral-100 dark:bg-neutral-800 px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-left;
+}
+
+tbody td {
+  @apply px-4 py-2 border border-neutral-300 dark:border-neutral-700;
 }
 
 .title {

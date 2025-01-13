@@ -51,4 +51,36 @@ summary: "Velog > GitHub + Jekyll pages > Next.js + Tailwind로 Blog 구현하�
 
 # 내가 선택한 Vercel Blog 방식
 
+나는 next.js로 블로그를 만들고 vercel로 배포할 계획이었기 때문에 여러 레퍼런스를 찾아보았다.
+
+그러다가 Vercel의 CEO인 Guillermo Rauch와 VP인 Lee Robinson의 블로그 아키텍쳐를 살펴보면서 Next.js를 이용해서 어떤 방식으로 블로그를 만들 수 있는지 살펴보았다.
+Guillermo 방식은 글을 코드 형태로 관리하고, Lee 방식은 글을 데이터 형태로 관리한다는 차이점이 있었다.
+
+Vercel 리더십의 블로그 아키텍쳐를 표로 정리하면 다음과 같다.
+
+# Markdown Table Example
+
+| Name | Age | City    |
+| ---- | --- | ------- |
+| Kim  | 25  | Seoul   |
+| Lee  | 30  | Busan   |
+| Park | 28  | Incheon |
+
+<Table
+  data={{
+    headers: ["", "Guillermo", "Lee"],
+    rows: [
+      ["데이터 관리", "글을 코드로", "글을 데이터로"],
+      ["라우팅", "Route Groups", "Dynamic Routes"],
+      ["렌더링", "Incremental Static Regeneration", "Partial Prerendering"],
+      ["메타데이터", "Static Metadata", "Dynamic Metadata"],
+    ],
+  }}
+/>
+
+### 블로그 동작 방식
+
+필자는
+Lee의 방식인 글을 데이터 형태로 관리하는 것은 일반적인 Next.js 블로그와 동일한 방식이다.
+
 ## Conclusion

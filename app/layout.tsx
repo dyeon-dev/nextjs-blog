@@ -12,15 +12,15 @@ import { themeEffect } from "utils/themeEffect";
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Next.js Portfolio Starter",
-    template: "%s | Next.js Portfolio Starter",
+    default: "dyeon-dev",
+    template: "%s | dyeon-dev",
   },
-  description: "This is my portfolio.",
+  description: "지식들을 정리하고 기록해두는 공간입니다.",
   openGraph: {
-    title: "My Portfolio",
-    description: "This is my portfolio.",
+    title: "dyeon-dev",
+    description: "지식들을 정리하고 기록해두는 공간입니다.",
     url: baseUrl,
-    siteName: "My Portfolio",
+    siteName: "dyeon-dev",
     locale: "en_US",
     type: "website",
   },
