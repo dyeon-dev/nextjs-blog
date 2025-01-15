@@ -8,6 +8,11 @@ type Metadata = {
   image?: string
 }
 
+type Heading = {
+  level: number;
+  text: string;
+};
+
 // 파일 콘텐츠에서 Frontmatter(메타데이터 블록)와 본문을 추출
 function parseFrontmatter(fileContent: string) {
   let frontmatterRegex = /---\s*([\s\S]*?)\s*---/
@@ -38,16 +43,40 @@ function readMDXFile(filePath) {
   return parseFrontmatter(rawContent)
 }
 
+// MDX 본문에서 헤딩을 추출
+function extractHeadings(content: string): Heading[] {
+  let headingRegex = /^(#{1,6})\s+(.*)$/gm;
+  let codeBlockRegex = /```[\s\S]*?```/g; 
+  let headings: Heading[] = [];
+
+  // 코드 블록 제거
+  let contentWithoutCode = content.replace(codeBlockRegex, (match) => {
+    return ''.padEnd(match.length, ' '); // 코드 블록 자리에 같은 길이의 공백을 남겨둠
+  });
+  
+  let match;
+
+  while ((match = headingRegex.exec(contentWithoutCode)) !== null) {
+    let [_, hashes, text] = match;
+    headings.push({ level: hashes.length, text: text.trim() });
+  }
+
+  return headings;
+}
+
+// MDX 데이터 가져오기
 function getMDXData(dir) {
   let mdxFiles = getMDXFiles(dir)
   return mdxFiles.map((file) => {
     let { metadata, content } = readMDXFile(path.join(dir, file))
     let slug = path.basename(file, path.extname(file))
+    let headings = extractHeadings(content);
 
     return {
       metadata,
       slug,
       content,
+      headings,
     }
   })
 }
