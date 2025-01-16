@@ -9,9 +9,6 @@ const navItems = {
   "/blog": {
     name: "blog",
   },
-  "/project": {
-    name: "project",
-  },
   "https://github.com/dyeon-dev": {
     name: "github",
   },

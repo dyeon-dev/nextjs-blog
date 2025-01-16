@@ -1,115 +1,63 @@
-import { notFound } from "next/navigation";
-import { CustomMDX } from "app/components/mdx";
-import { formatDate, getBlogPosts } from "app/blog/utils";
-import { baseUrl } from "app/sitemap";
-import { ViewCount } from "app/components/view-count";
-import { Suspense } from "react";
-import TocBanner from "app/components/toc-banner";
+import { formatDate, getSeriesBlogs } from "app/blog/utils";
+import Link from "next/link";
 
 // 정적 사이트 생성(SSG)을 위해 모든 블로그 게시물의 slug를 반환
 export async function generateStaticParams() {
-  let posts = getBlogPosts();
+  let posts = getSeriesBlogs();
 
   return posts.map((post) => ({
     slug: post.slug,
   }));
 }
 
-// SEO 및 Open Graph 데이터를 생성하여 블로그 게시물이 검색 엔진에서 적절히 표시되도록 설정
-export function generateMetadata({ params }) {
-  let post = getBlogPosts().find((post) => post.slug === params.slug);
-  if (!post) {
-    return;
-  }
-
-  let {
-    title,
-    publishedAt: publishedTime,
-    summary: description,
-    image,
-  } = post.metadata;
-  let ogImage = image
-    ? image
-    : `${baseUrl}/og?title=${encodeURIComponent(title)}`;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: "article",
-      publishedTime,
-      url: `${baseUrl}/blog/${post.slug}`,
-      images: [
-        {
-          url: ogImage,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [ogImage],
-    },
-  };
-}
-
-// 블로그 게시물의 상세 페이지를 렌더링
-export default async function Blog({ params }) {
-  let post = getBlogPosts().find((post) => post.slug === params.slug);
-
-  if (!post) {
-    notFound();
-  }
+// 시리즈 블로그 게시물의 상세 페이지를 렌더링
+export default async function Blog() {
+  let seriesBlogs = getSeriesBlogs();
 
   return (
-    <>
-      <section className="mt-16">
-        {/* 검색 엔진이 블로그의 컨텐츠를 잘 해석할 수 있도록 돕는 포맷 */}
-        <script
-          type="application/ld+json"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "BlogPosting",
-              headline: post.metadata.title,
-              datePublished: post.metadata.publishedAt,
-              dateModified: post.metadata.publishedAt,
-              description: post.metadata.summary,
-              image: post.metadata.image
-                ? `${baseUrl}${post.metadata.image}`
-                : `/og?title=${encodeURIComponent(post.metadata.title)}`,
-              url: `${baseUrl}/blog/${post.slug}`,
-              author: {
-                "@type": "Person",
-                name: "dyeon-dev",
-              },
-            }),
-          }}
-        />
-        <h1 className="title font-semibold text-2xl tracking-tighter">
-          {post.metadata.title}
-        </h1>
-        <div className="flex justify-between items-center mt-2 mb-8 text-sm">
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {formatDate(post.metadata.publishedAt)}
-          </p>
-          <Suspense>
-            <ViewCount slug={post.slug} />
-          </Suspense>
-        </div>
-        <article className="prose">
-          <CustomMDX source={post.content} />
-        </article>
-      </section>
-      <div className="ml-auto">
-        <div className="fixed ml-24 top-[120px] hidden min-w-[280px] max-w-[260px] self-start lg:block">
-          <TocBanner headings={post.headings} />
-        </div>
+    <div className="mt-16">
+      <h1 className="font-semibold text-2xl mb-8 tracking-tighter">
+        Series Post
+      </h1>
+
+      <div className="flex items-center space-x-10">
+        {seriesBlogs
+          .sort((a, b) => {
+            if (
+              new Date(a.metadata.publishedAt) >
+              new Date(b.metadata.publishedAt)
+            ) {
+              return -1;
+            }
+            return 1;
+          })
+          .map((series) => (
+            <>
+              <p className="text-neutral-900 dark:text-neutral-100 text-xl w-[200px] tabular-nums">
+                {series.title}
+              </p>
+
+              <div className="border-l pl-4">
+                {series.files.map((file) => (
+                  <Link
+                    key={series.slug}
+                    className="flex flex-col space-y-1 mb-4 gap-3"
+                    href={`/blog/${file.slug}`}
+                  >
+                    <div className="w-full flex flex-col md:flex-row space-x-0 md:space-x-4">
+                      <p className="text-neutral-600 dark:text-neutral-400 w-[90px] tabular-nums">
+                        {formatDate(file.metadata.publishedAt)}
+                      </p>
+                      <p className="text-neutral-900 dark:text-neutral-100 tracking-tight">
+                        {file.metadata.title}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          ))}
       </div>
-    </>
+    </div>
   );
 }

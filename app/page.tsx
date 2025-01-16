@@ -17,10 +17,7 @@ export default function Page() {
       <h1 className="mt-8 text-xl font-semibold tracking-tighter">Skills</h1>
       <p className="mt-4">{`React, Vue, JavaScript, TypeScript, HTML5, CSS3`}</p>
 
-      <h1 className="mt-12 text-xl font-semibold tracking-tighter">
-        Blog Post
-      </h1>
-      <div className="my-8">
+      <div className="my-4">
         <BlogPosts />
       </div>
     </section>
