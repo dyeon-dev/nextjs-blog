@@ -46,7 +46,7 @@ export default async function Blog() {
                   >
                     <div className="w-full flex flex-col md:flex-row space-x-0 md:space-x-4">
                       <p className="text-neutral-600 dark:text-neutral-400 w-[90px] tabular-nums">
-                        {formatDate(file.metadata.publishedAt)}
+                        {formatDate(file.metadata.publishedAt).fullDate}
                       </p>
                       <p className="text-neutral-900 dark:text-neutral-100 tracking-tight">
                         {file.metadata.title}

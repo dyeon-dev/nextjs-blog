@@ -179,11 +179,11 @@ export function formatDate(date: string, includeRelative = false) {
     formattedDate = '오늘'
   }
 
-  // let fullDate = targetDate.toLocaleString('en-us', {
-  //   month: 'long',
-  //   day: 'numeric',
-  //   year: 'numeric',
-  // })
+  let fullDateEN = targetDate.toLocaleString('en-us', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
 
   let fullDate = targetDate.toLocaleString('ko-KR', {
     year: '2-digit',
@@ -192,8 +192,12 @@ export function formatDate(date: string, includeRelative = false) {
   }).replace(/\//g, '.').replace(',', '').replace(/\.\s*$/, ''); 
 
   if (!includeRelative) {
-    return fullDate
+    return { fullDateEN, fullDate };
   }
 
-  return `${fullDate} (${formattedDate})`
+  return {
+    fullDateEN,
+    fullDate,
+    relativeDate: includeRelative ? `${fullDate} (${formattedDate})` : undefined,
+  };
 }
