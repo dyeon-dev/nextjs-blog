@@ -66,6 +66,72 @@ module.exports = {
 };
 ```
 
+## SSG를 PPR(Partial Prerendering-Rendering)로 변경
+
+Vercel에서 빌드 로그를 살펴보면, SSG 방식으로 동작하고 있다.
+
+```
+Route (app)                              Size     First Load JS
+┌ ○ /                                    176 B            94 kB
+├ ○ /_not-found                          142 B          87.2 kB
+├ ○ /blog                                176 B            94 kB
+├ ● /blog/[slug]                         5.24 kB        99.1 kB
+(... 중략)
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses getStaticProps)
+ƒ  (Dynamic)  server-rendered on demand
+```
+
+### Dynamic Routes & PPR(Partial Prerendering-Rendering)
+
+Lee의 블로그를 살펴봤을 때 Dynamic Routes과 PPR를 사용하는 중인 걸 확인할 수 있다.
+
+Lee의 방식을 참고해서 SSG 방식을 PPR로 바꿔서 새로운 기능을 적용해보도록 하겠다.
+
+Dynamic Routes란 app/blog/[slug]/page.tsx와 같은 방식을 말한다.
+
+### PPR 이란?
+
+**Partial Pre-rendering (PPR)**는 정적인 웹 페이지와 동적인 웹 페이지 렌더링 방식을 조합하여, 필요한 부분만 사전 렌더링(pre-rendering)하고, 나머지는 클라이언트 측에서 동적으로 로드하는 기술이다.
+
+PPR은 Next.js 13 버전에는 없고 14 버전부터 도입되는 아직은 실험적인 기능이다.
+
+Partial Pre-rendering은 정적 렌더링(SSG)과 동적 처리(SSR, CSR)의 장점을 결합한 방식으로, 사용자 경험을 개선하면서도 성능을 최적화할 수 있는 유연한 솔루션을 제공한다.
+
+Next.js에서 이를 잘 활용함으로써, 대규모 애플리케이션의 성능을 극대화할 수 있다.
+
+#### 적용 방법
+
+- 이 기능을 적용하려면 next.config.js에서 설정을 해주면 된다.
+
+```
+module.default = {
+  experimental: {
+    ppr: true,
+  },
+};
+```
+
+- next.js의 canary 버전을 사용해야 한다.
+
+  - pnpm install next@14.1.1-canary.46
+
+- Suspense로 페이지의 static과 dynamic한 부분을 구분지을 수 있다.
+
+렌더링의 경우 PPR을 사용하여 다음과 같이 렌더링 아이콘이 절반만 차지하도록 되어있다.
+
+```
+Route (app)                              Size     First Load JS
+┌ ◐ /                                    1.59 kB         102 kB
+├ ○ /blog                                178 B          95.5 kB
+├ ◐ /blog/[slug]                         16.7 kB         328 kB
+
+(... 중략)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+```
+
 <br />
 
 ---
@@ -73,3 +139,10 @@ module.exports = {
 ## Conclusion
 
 tailwindcss의 지나치게 최신화 되어있는 버전을 다운그레이드 시키면서 설정에 있는 값들을 변경해주는 작업을 하였다.
+
+그리고 PPR을 적용하여 페이지의 dynamic한 부분을 Suspense로 감싸기만 하면 Next.js compilier는 static과 dynamic한 부분을 구분해주도록 설정을 마쳤다.
+
+next의 canary 버전을 사용하는만큼 PPR은 아직 실험적인 기능이고 DX 이슈와 성능 이슈가 존재하기 때문에 프로덕션에서 사용하는 것은 추천하지 않고 있다.
+
+하지만 해당 프로젝트에 적용해봄으로써 최신 기술에 대한 이해도를 높히고,
+프론트엔드에서 UX와 DX를 고도화 하는 작업이 많이 이루지는 방향으로 나아갈 수 있게끔 기반을 다지는 역할을 할 것이다.

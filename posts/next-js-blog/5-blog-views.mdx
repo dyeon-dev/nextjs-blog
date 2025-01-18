@@ -186,7 +186,7 @@ export const incrementView = async (slug: string) => {
 
 조회수를 ViewCount 컴포넌트로 렌더링한다.
 
-또한, 해당 프로젝트는 **PPR(Partial Prerendering-Rendering)을 적용했기 때문에 정적으로 둘 영역과 동적으로 채울 영역을 구분지어야 하는 작업이 필요하다.**
+또한, 해당 프로젝트는 **PPR(Partial Prerendering-Rendering)을 적용했기 때문에 static, dynamic한 부분을 구분지어야 하는 작업이 필요하다.**
 
 조회수 부분을 동적으로 채워야하는데, 그러기 위해 **Suspense**로 감싸줘서 **PPR으로 렌더링**할 영역으로 만든다.
 
@@ -228,7 +228,7 @@ html 속성에서 확인해보면 Suspense가 남아있던 흔적이 있고, 동
 
 ![html_suspense](/images/posts/1-next-js-blog/5-5.png)
 
-이렇게 적용하게 되면, 해당 영역은 동적인 영역이 돼서 다른 쉘 영역보다 조금 느리게 렌더링 된다! 🌀🌀
+이렇게 적용하게 되면, 해당 영역은 동적인 영역이 돼서 다른 static 영역보다 조금 느리게 렌더링 된다! 🌀🌀
 
 <br />
 

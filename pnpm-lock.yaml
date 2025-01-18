@@ -14,9 +14,6 @@ importers:
       '@neondatabase/serverless':
         specifier: ^0.10.4
         version: 0.10.4
-      '@next/mdx':
-        specifier: ^15.1.4
-        version: 15.1.4(@mdx-js/react@3.1.0(@types/react@18.2.55)(react@18.2.0))
       '@types/node':
         specifier: 20.11.17
         version: 20.11.17
@@ -114,17 +111,6 @@ packages:
 
   '@next/env@14.2.0-canary.66':
     resolution: {integrity: sha512-JiOiZNdKK3P9IMvyd/k7MFpEuzrRgVOt2a5DlGnyVQ1YSospSJ5DsnWIPLfnYij4STNVBVnB1mhzhMAveLWGiQ==}
-
-  '@next/mdx@15.1.4':
-    resolution: {integrity: sha512-GsmKCWPDW6Qas4/yL+zj7RLGrDsVu89F42/S9pVcPTvYmXNK1PqRT6H7outQy6Ox/AGB8As1lxPvk4dJmDIm7w==}
-    peerDependencies:
-      '@mdx-js/loader': '>=0.15.0'
-      '@mdx-js/react': '>=0.15.0'
-    peerDependenciesMeta:
-      '@mdx-js/loader':
-        optional: true
-      '@mdx-js/react':
-        optional: true
 
   '@next/swc-darwin-arm64@14.2.0-canary.66':
     resolution: {integrity: sha512-YYOXDfO55ShbR9Hhh4cIxdrsfPzSUeD8ANAhUTQqVpfqXHwMM/dxXYTz9WtpsRgk7/YWAR+GOcCSWyHa3NZvFw==}
@@ -1346,12 +1332,6 @@ snapshots:
       '@types/pg': 8.11.6
 
   '@next/env@14.2.0-canary.66': {}
-
-  '@next/mdx@15.1.4(@mdx-js/react@3.1.0(@types/react@18.2.55)(react@18.2.0))':
-    dependencies:
-      source-map: 0.7.4
-    optionalDependencies:
-      '@mdx-js/react': 3.1.0(@types/react@18.2.55)(react@18.2.0)
 
   '@next/swc-darwin-arm64@14.2.0-canary.66':
     optional: true
