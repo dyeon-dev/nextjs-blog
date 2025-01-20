@@ -10,7 +10,7 @@ summary: "Serverless DB를 활용해서 조회수 데이터 관리하기"
 
 ## Vercel에서 해당 리포지토리 배포
 
-Vercel에 배포하게 되면 Vercel에서 DB를 사용할 수 있다. 이 기능을 사용해서 조회수를 관리할 것이다.
+Vercel에 배포하게 되면 Vercel에서 DB를 사용할 수 있다. 이 기능을 통해 조회수를 관리할 것이다.
 
 <br />
 
@@ -87,12 +87,12 @@ POSTGRES_USER="neondb_owner"
 
 - slug와 count 칼럼을 가진 views 테이블 생성
 
-```
-CREATE TABLE views (
-  slug varchar(255) primary key,
-  count integer not null default 0
-);
-```
+  ```
+  CREATE TABLE views (
+    slug varchar(255) primary key,
+    count integer not null default 0
+  );
+  ```
 
 ### 6. 조회수 쿼리문 작성
 
@@ -100,51 +100,51 @@ CREATE TABLE views (
 
 - DB 연결 후 조회수 데이터 가져오는 코드 작성
 
-```
-// app/queries/db.ts
+  ```
+  // app/queries/db.ts
 
-// serverless neon 연결
-const sql = neon(`${process.env.DATABASE_URL}`);
-// 조회수 데이터
-export async function getViewsCount(): Promise<
-  { slug: string; count: number }[]
-> {
-  if (!process.env.DATABASE_URL) {
-    return [];
+  // serverless neon 연결
+  const sql = neon(`${process.env.DATABASE_URL}`);
+  // 조회수 데이터
+  export async function getViewsCount(): Promise<
+    { slug: string; count: number }[]
+  > {
+    if (!process.env.DATABASE_URL) {
+      return [];
+    }
+
+    const rows = await sql("SELECT slug, count FROM views");
+
+    return rows.map((row: { slug: string; count: number }) => ({
+      slug: row.slug,
+      count: row.count,
+    }));
   }
-
-  const rows = await sql("SELECT slug, count FROM views");
-
-  return rows.map((row: { slug: string; count: number }) => ({
-    slug: row.slug,
-    count: row.count,
-  }));
-}
-```
+  ```
 
 - view 테이블에 조회수 업데이트 하는 쿼리 작성
 
-```
-// app/queries/db.ts
+  ```
+  // app/queries/db.ts
 
-// 조회수 증가
-const incrementView = async (slug: string) => {
+  // 조회수 증가
+  const incrementView = async (slug: string) => {
 
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is not defined");
-  }
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not defined");
+    }
 
-  // 'views' 테이블에 slug를 삽입하거나 count를 업데이트
-  await sql(
-    `
-  INSERT INTO views (slug, count)
-  VALUES ($1, 1)
-  ON CONFLICT (slug) DO UPDATE SET count = views.count + 1
-  `,
-    [slug]
-  );
-};
-```
+    // 'views' 테이블에 slug를 삽입하거나 count를 업데이트
+    await sql(
+      `
+    INSERT INTO views (slug, count)
+    VALUES ($1, 1)
+    ON CONFLICT (slug) DO UPDATE SET count = views.count + 1
+    `,
+      [slug]
+    );
+  };
+  ```
 
 이렇게까지만 적용하게 되면, 강력 새로고침으로 리프레시를 해야 조회수가 업데이트 된다. 강력 새로고침에 종속된 상태를 풀기 위해서 **`noStore`** 개념을 활용해준다.
 
@@ -180,7 +180,7 @@ export const incrementView = async (slug: string) => {
 };
 ```
 
-이렇게 적용하게 되면, 캐시가 되지 않고 기본적인 새로고침만 해도 조회수가 올라간다.
+이렇게 적용하게 되면, **캐시가 되지 않고 기본적인 새로고침만 해도 조회수가 올라간다.**
 
 ### 7. 조회수 영역 만들기
 

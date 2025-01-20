@@ -13,14 +13,14 @@ type Heading = {
   text: string;
 };
 
-type SeriesBlog = {
+export type SeriesBlog = {
   title: string;
   metadata: Metadata;
   slug: string;
   files: SeriesFiles[];
 };
 
-type SeriesFiles = {
+export type SeriesFiles = {
   slug: string;
   metadata: Metadata;
 }
@@ -149,6 +149,53 @@ export function getSeriesBlogs() {
     files
       .filter((file) => fs.statSync(path.join(dir, file)).isDirectory())
       .forEach((subDir) => findSeries(path.join(dir, subDir)));
+  }
+
+  findSeries(postsDir);
+  return series;
+}
+
+
+export function getSeriesBlog(seriesSlug: string): SeriesBlog | null {
+  const postsDir = path.join(process.cwd(), 'posts');
+  let series: SeriesBlog | null = null;
+
+  function findSeries(dir: string) {
+    const files = fs.readdirSync(dir);
+    const hasIndexFile = files.includes('index.mdx');
+
+    if (hasIndexFile) {
+      const dirSlug = path.relative(postsDir, dir).replace(/\\/g, '/');
+      if (dirSlug === seriesSlug) {
+        const indexFilePath = path.join(dir, 'index.mdx');
+        const { metadata: indexMetadata } = readMDXFile(indexFilePath);
+
+        const seriesFiles = files
+          .filter((file) => file.endsWith('.mdx') && file !== 'index.mdx')
+          .map((file) => {
+            const filePath = path.join(dir, file);
+            const { metadata } = readMDXFile(filePath);
+            return {
+              slug: path.relative(postsDir, filePath).replace(/\\/g, '/').replace(/\.mdx$/, ''),
+              metadata,
+            };
+          });
+
+        series = {
+          title: indexMetadata.title || 'Untitled Series',
+          metadata: indexMetadata,
+          slug: dirSlug,
+          files: seriesFiles,
+        };
+      }
+    }
+
+    // 하위 디렉토리 탐색
+    if (!series) {
+      files
+        .filter((file) => fs.statSync(path.join(dir, file)).isDirectory())
+        .forEach((subDir) => findSeries(path.join(dir, subDir)));
+    }
   }
 
   findSeries(postsDir);

@@ -6,7 +6,7 @@ export default function TocBanner({ headings }) {
       <div className="p-4">
         <p
           id="toc-header"
-          className="ml-5 text-primary text-md font-extrabold leading-6"
+          className="text-primary text-md font-extrabold leading-6"
         >
           목차
         </p>

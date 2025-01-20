@@ -52,7 +52,17 @@ function RoundedImage(props) {
 function Code({ children, ...props }) {
   if (!children) return "";
   let codeHTML = highlight(children);
-  return <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />;
+  return (
+    <span
+      style={{
+        overflow: "auto",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}
+    >
+      <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />
+    </span>
+  );
 }
 
 function createHeading(level) {

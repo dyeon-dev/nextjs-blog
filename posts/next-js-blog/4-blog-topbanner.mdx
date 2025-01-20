@@ -1,7 +1,7 @@
 ---
 title: "블로그 목차를 만들어보자"
 publishedAt: "2025-01-12"
-summary: "블로그 TopBanner 만들기"
+summary: "TopBanner를 만들고, 목차 생성을 위한 유용한 플러그인까지 알아보자"
 ---
 
 마크다운에서 `#`을 통한 헤딩을 통해 자동으로 목차를 생성해주는 기능을 추가하도록 하겠다.
@@ -12,23 +12,23 @@ summary: "블로그 TopBanner 만들기"
 
 ## 0. 배너 위치 산정하기
 
-블로그 글 페이지 오른쪽 끝에 fixed로 TopBanner의 위치를 잡아준다.
+블로그 글 페이지 오른쪽에 위치할 수 있도록 `justify-between`를 해주고 `sticky`로 TopBanner의 위치를 잡아준다.
 
 ```typescirpt
 // `app/blog/[slug]/page.tsx`
 import TocBanner from "app/components/toc-banner";
 
   return (
-    <>
+    <div className="flex justify-between">
       <section className="mt-16">
         ... 생략
       </section>
       <div className="ml-auto">
-        <div className="fixed ml-24 top-[120px] hidden min-w-[280px] max-w-[260px] self-start lg:block">
+        <div className="ml-24 top-[120px] hidden min-w-[280px] max-w-[280px] self-start lg:block sticky top-0">
           <TocBanner headings={post.headings} />
         </div>
       </div>
-    </>
+    <div/>
   );
 ```
 
@@ -58,7 +58,7 @@ export default function TocBanner({ headings }) {
 
 ## 1. MDX 콘텐츠에서 헤딩 추출
 
-MDX 파일을 렌더링하는 과정에서 헤딩 데이터를 추출하고 이를 TocBanner로 전달한다.
+MDX 파일을 렌더링하는 과정에서 **헤딩 데이터를 추출하고 이를 TocBanner로 전달**한다.
 
 `getMDXData` 함수에서 heading을 추출하는 함수를 포함시켜 내보낸다.
 이렇게 getBlogPosts에서 MDX 파일의 헤딩 목록을 추출하도록 수정한다.
@@ -115,7 +115,8 @@ let match;
 
 목차 렌더링을 할 때 주의할 점이 있다. ⚠️
 
-기존의 블로그 템플릿에서 헤딩을 클릭할 때 아래의 slugify 함수로 헤딩을 파싱하여 `#heading-name` href 형식으로 URL을 지원하고 있다.
+기존의 블로그 템플릿에서 헤딩을 클릭할 때 아래의 `slugify` 함수로 헤딩을 파싱하여 `#heading-name`의 href 형식으로 URL을 지원하고 있다.
+
 따라서 해당 href 형식을 맞춰서 목차를 렌더링 해야한다.
 
 ```typescirpt
@@ -155,7 +156,7 @@ function createHeading(level) {
 }
 ```
 
-하지만 이 코드에는 한국어 지원이 안되고 있으니 추가해주자! 그리고 utils 폴더로 분리해서 적용해준다.
+하지만 이 코드에는 **한국어 지원이 안되고 있으니 추가해주자!** 그리고 utils 폴더로 분리해서 적용해준다.
 
 ```typescirpt
 // utils/slugify.ts
@@ -173,7 +174,7 @@ export default function slugify(str) {
 }
 ```
 
-slugify 함수를 분리해줬으니까 TocBanner에서 목차를 생성할 때 href 링크를 slugify 함수로 적용해준다.
+slugify 함수를 분리해줬으니까 **TocBanner에서 목차를 생성할 때 href 링크를 slugify 함수로 적용**해준다.
 
 이렇게 하면, Blog 페이지에서 MDX 파일의 헤딩 정보를 기반으로 TocBanner에 목차가 생성된다. 각 목차 항목은 해당 헤딩으로 이동하는 링크를 포함한다.
 
@@ -263,11 +264,11 @@ ex) `<h2 id="my-heading"><a href="#my-heading">My Heading</a></h2>`
 
 플러그인을 사용한다면, 편리한 점이 분명 있지만 **프로젝트 구조와 요구사항에 맞는 방식으로 선택**해야 한다.
 
-또한, 주의할 점은 rehype-slug에서 생성된 id와 목차에서 생성된 href가 일치하도록 목차 생성 시에도 동일하게 슬러그를 적용해야 한다.
+또한, 앞서 말했듯이 주의할 점은 rehype-slug에서 생성된 id와 목차에서 생성된 href가 일치하도록 목차 생성 시에도 동일하게 슬러그를 적용해야 한다.
 
 플러그인을 사용하는 것이 아닌, 커스텀한 방식으로 id를 생성하고 싶으면 정규표현식을 사용하면 된다. 다만, 슬러그 생성과 링크 추가, 코드 블록 처리 등을 직접 구현해야 한다.
 
-주요 차이점은 다음 표와 같다.
+주요 차이점은 다음과 같다.
 
 <Table
   data={{
