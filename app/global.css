@@ -31,9 +31,9 @@
   --sh-entity: #ffab91;
 }
 
-html {
+/* html {
   min-width: 360px;
-}
+} */
 
 header {
   background:linear-gradient(

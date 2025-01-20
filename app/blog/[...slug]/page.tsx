@@ -24,7 +24,7 @@ export default async function Blog({ params }) {
   }
 
   return (
-    <>
+    <div className="flex justify-between">
       <section className="mt-16">
         <script
           type="application/ld+json"
@@ -64,10 +64,10 @@ export default async function Blog({ params }) {
         </article>
       </section>
       <div className="ml-auto">
-        <div className="fixed ml-24 top-[120px] hidden min-w-[280px] max-w-[260px] self-start lg:block">
+        <div className="ml-24 top-[120px] hidden min-w-[280px] max-w-[280px] self-start lg:block sticky top-0">
           <TocBanner headings={post.headings} />
         </div>
       </div>
-    </>
+    </div>
   );
 }

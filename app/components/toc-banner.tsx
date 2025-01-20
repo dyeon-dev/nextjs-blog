@@ -2,26 +2,25 @@ import slugify from "utils/slugify";
 
 export default function TocBanner({ headings }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-md">
+    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-md">
       <div className="p-4">
         <p
           id="toc-header"
-          className="text-primary text-sm font-extrabold leading-6"
+          className="ml-5 text-primary text-md font-extrabold leading-6"
         >
           목차
         </p>
-        <ul
-          id="toc-content"
-          className="mt-2 gap-2 flex flex-col items-start justify-start text-md"
-        >
+        <ul id="toc-content" className="mt-2 gap-2 flex flex-col text-md">
           {headings.map((heading, index) => {
             const slug = slugify(heading.text);
             return (
-              <li key={index} className={`ml-${heading.level} relative group`}>
+              <li key={index} className={`ml-${heading.level + 2}`}>
                 <a
                   href={`#${slug}`}
                   className="block py-1 px-2 rounded-lg transition-all duration-200 ease-in-out 
                      text-neutral-700 dark:text-neutral-300 
+                     hover:text-neutral-100 dark:hover:text-neutral-100
+                     focus:text-neutral-100 focus:hover:text-neutral-100
                      hover:bg-neutral-100 dark:hover:bg-neutral-800 
                      focus:bg-neutral-200 dark:focus:bg-neutral-700"
                 >
