@@ -17,7 +17,11 @@ export function SeriesPosts() {
             href={`/blog/${series.slug}`}
           >
             <div className="relative h-90 w-50 select-none rounded-l px-8 pt-8 pb-12 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl">
-              <img src={series.metadata.image} alt={series.title} />
+              <img
+                src={series.metadata.image}
+                alt={series.title}
+                style={{ borderRadius: "10px" }}
+              />
               <h2 className="font-semibold text-xl">{series.title}</h2>
             </div>
           </Link>
