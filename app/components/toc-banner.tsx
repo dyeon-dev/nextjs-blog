@@ -14,12 +14,12 @@ export default function TocBanner({ headings }) {
           {headings.map((heading, index) => {
             const slug = slugify(heading.text);
             return (
-              <li key={index} className={`ml-${heading.level + 2}`}>
+              <li key={index} className={`ml-${heading.level}`}>
                 <a
                   href={`#${slug}`}
                   className="block py-1 px-2 rounded-lg transition-all duration-200 ease-in-out 
                      text-neutral-700 dark:text-neutral-300 
-                     hover:text-neutral-100 dark:hover:text-neutral-100
+                     hover:text-black dark:hover:text-neutral-100
                      focus:text-neutral-100 focus:hover:text-neutral-100
                      hover:bg-neutral-100 dark:hover:bg-neutral-800 
                      focus:bg-neutral-200 dark:focus:bg-neutral-700"

@@ -13,7 +13,7 @@ export default function Blog({ params }) {
       </h1>
 
       <div className="flex items-center space-x-10">
-        <p className="text-neutral-900 dark:text-neutral-100 text-xl w-[200px] tabular-nums">
+        <p className="text-neutral-900 dark:text-neutral-100 text-xl w-[350px] tabular-nums">
           {series.title}
         </p>
 
