@@ -31,7 +31,7 @@ export default function PostFooter({ prevPost, nextPost }) {
             </svg>
             <div className="ml-3">
               <span className="text-xs text-gray-500">Previous</span>
-              <div className="text-base font-semibold text-gray-900 group-hover:text-black">
+              <div className="text-base font-semibold text-gray-900 dark:text-neutral-300 group-hover:text-black">
                 {prevPost.metadata.title}
               </div>
             </div>
@@ -47,7 +47,7 @@ export default function PostFooter({ prevPost, nextPost }) {
           <div className="flex items-center justify-end p-4 border rounded-md shadow-sm hover:shadow-md hover:bg-gray-100 transition">
             <div className="mr-3">
               <span className="text-xs text-gray-500">Next</span>
-              <div className="text-base font-semibold text-gray-900 group-hover:text-black">
+              <div className="text-base font-semibold text-neutral-900 dark:text-neutral-300 group-hover:text-black">
                 {nextPost.metadata.title}
               </div>
             </div>
