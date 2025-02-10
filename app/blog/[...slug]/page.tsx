@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { CustomMDX } from "app/components/mdx";
-import { formatDate, getBlogPosts } from "app/blog/utils";
+import { formatDate, getBlogPosts, getSeriesBlog } from "app/blog/utils";
 import { baseUrl } from "app/sitemap";
 import { ViewCount } from "app/components/view-count";
 import { Suspense } from "react";
 import TocBanner from "app/components/toc-banner";
+import PostFooter from "app/components/post-footer";
 
 // 정적 사이트 생성(SSG)을 위해 모든 블로그 게시물의 slug를 반환
 export async function generateStaticParams() {
@@ -18,6 +19,25 @@ export async function generateStaticParams() {
 export default async function Blog({ params }) {
   let slug = params.slug.join("/"); // 배열을 문자열로 변환
   let post = getBlogPosts().find((post) => post.slug === slug);
+
+  let seriesBlogs = getBlogPosts();
+  const series = getSeriesBlog(params.slug[0]); // seriesSlug를 인자로 전달하여 시리즈 가져오기
+  console.log(params.slug);
+  let postIndex = series
+    ? series.files.findIndex((p) => p.slug === slug)
+    : getBlogPosts().findIndex((p) => p.slug === slug); // 시리즈가 존재할 경우 파일 목록에서 인덱스 찾기
+  console.log("Current post index:", postIndex);
+
+  let prevPost = postIndex > 0 ? getBlogPosts()[postIndex - 1] : null; // 이전 포스트 찾기
+  let nextPost =
+    postIndex < getBlogPosts().length - 1
+      ? getBlogPosts()[postIndex + 1]
+      : null; // 다음 포스트 찾기
+
+  let prevSeriesPost =
+    postIndex > 0 && series ? series.files[postIndex - 1] : null; // 이전 포스트 찾기
+  let nextSeriesPost =
+    postIndex < series!.files.length - 1 ? series!.files[postIndex + 1] : null; // 다음 포스트 찾기
 
   if (!post) {
     notFound();
@@ -65,6 +85,11 @@ export default async function Blog({ params }) {
         <article className="prose">
           <CustomMDX source={post.content} />
         </article>
+        {series ? (
+          <PostFooter prevPost={prevSeriesPost} nextPost={nextSeriesPost} />
+        ) : (
+          <PostFooter prevPost={prevPost} nextPost={nextPost} />
+        )}
       </section>
       <div className="ml-auto">
         <div className="ml-24 top-[120px] hidden min-w-[280px] max-w-[280px] self-start lg:block sticky top-0">
