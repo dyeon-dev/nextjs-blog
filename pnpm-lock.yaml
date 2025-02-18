@@ -38,9 +38,6 @@ importers:
       next-mdx-remote:
         specifier: ^4.4.1
         version: 4.4.1(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      next-themes:
-        specifier: ^0.4.4
-        version: 0.4.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -831,12 +828,6 @@ packages:
     peerDependencies:
       react: '>=16.x <=18.x'
       react-dom: '>=16.x <=18.x'
-
-  next-themes@0.4.4:
-    resolution: {integrity: sha512-LDQ2qIOJF0VnuVrrMSMLrWGjRMkq+0mpgl6e0juCLqdJ+oo8Q84JRWT6Wh11VDQKkMMe+dVzDKLWs5n87T+PkQ==}
-    peerDependencies:
-      react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
-      react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
   next@14.2.0-canary.66:
     resolution: {integrity: sha512-/pZ48EPwT+seb3g6JZjs1BAtgzfLbPU6p8NuOlnLGuwwsjJAFUfEzq9WaYZ+J3Q2Rnd5EjdcfpNlJZKZ7W3+Gg==}
@@ -2218,11 +2209,6 @@ snapshots:
       vfile-matter: 3.0.1
     transitivePeerDependencies:
       - supports-color
-
-  next-themes@0.4.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
-    dependencies:
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
 
   next@14.2.0-canary.66(@opentelemetry/api@1.9.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
