@@ -13,9 +13,14 @@ export default function Blog({ params }) {
       </h1>
 
       <div className="flex items-center space-x-10">
-        <p className="text-neutral-900 dark:text-neutral-100 text-xl w-[350px] tabular-nums">
-          {series.title}
-        </p>
+        <div>
+          <p className="text-neutral-900 dark:text-neutral-100 text-xl w-[350px] tabular-nums mb-4">
+            {series.title}
+          </p>
+          <p className="text-neutral-700 dark:text-neutral-400 text-md w-[350px] tabular-nums">
+            {series.summary}
+          </p>
+        </div>
 
         <div className="border-l pl-4">
           {series.files.map((file) => (

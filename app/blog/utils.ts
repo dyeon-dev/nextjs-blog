@@ -15,6 +15,7 @@ type Heading = {
 
 export type SeriesBlog = {
   title: string;
+  summary: string;
   metadata: Metadata;
   slug: string;
   files: SeriesFiles[];
@@ -139,6 +140,7 @@ export function getSeriesBlogs() {
 
         series.push({
           title: indexMetadata.title || 'Untitled Series',
+          summary: indexMetadata.summary || "",
           metadata: indexMetadata,
           slug: path.relative(postsDir, dir).replace(/\\/g, '/'),
           files: seriesFiles,
@@ -183,6 +185,7 @@ export function getSeriesBlog(seriesSlug: string): SeriesBlog | null {
 
         series = {
           title: indexMetadata.title || 'Untitled Series',
+          summary: indexMetadata.summary || "",
           metadata: indexMetadata,
           slug: dirSlug,
           files: seriesFiles,
