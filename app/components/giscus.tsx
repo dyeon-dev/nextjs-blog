@@ -1,20 +1,14 @@
 "use client";
-
-import { useRouter } from "next/router";
-import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 
 export default function Giscus() {
   const ref = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // https://github.com/giscus/giscus/tree/main/styles/themes
   // const theme = resolvedTheme === "dark" ? "dark" : "light";
   const theme = localStorage.getItem("theme") === "dark" ? "dark" : "light";
   useEffect(() => {
-    const theme = localStorage.getItem("theme") === "dark" ? "dark" : "light";
-
     if (!ref.current || ref.current.hasChildNodes()) return;
 
     const scriptElem = document.createElement("script");
@@ -40,8 +34,6 @@ export default function Giscus() {
 
   // https://github.com/giscus/giscus/blob/main/ADVANCED-USAGE.md#isetconfigmessage
   useEffect(() => {
-    const theme = localStorage.getItem("theme") === "dark" ? "dark" : "light";
-
     if (!mounted) return;
 
     const iframe = document.querySelector<HTMLIFrameElement>(
@@ -55,8 +47,6 @@ export default function Giscus() {
 
   // https://github.com/giscus/giscus/blob/main/ADVANCED-USAGE.md#isetconfigmessage
   useEffect(() => {
-    const theme = localStorage.getItem("theme") === "dark" ? "dark" : "light";
-
     const iframe = document.querySelector<HTMLIFrameElement>(
       "iframe.giscus-frame"
     );
