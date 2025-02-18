@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import TocBanner from "app/components/toc-banner";
 import PostFooter from "app/components/post-footer";
 import Giscus from "app/components/giscus";
+import ViewsSkeleton from "app/components/views-skeleton";
 
 // 정적 사이트 생성(SSG)을 위해 모든 블로그 게시물의 slug를 반환
 export async function generateStaticParams() {
@@ -21,13 +22,10 @@ export default async function Blog({ params }) {
   let slug = params.slug.join("/"); // 배열을 문자열로 변환
   let post = getBlogPosts().find((post) => post.slug === slug);
 
-  let seriesBlogs = getBlogPosts();
   const series = getSeriesBlog(params.slug[0]); // seriesSlug를 인자로 전달하여 시리즈 가져오기
-  console.log(params.slug);
   let postIndex = series
     ? series.files.findIndex((p) => p.slug === slug)
     : getBlogPosts().findIndex((p) => p.slug === slug); // 시리즈가 존재할 경우 파일 목록에서 인덱스 찾기
-  console.log("Current post index:", postIndex);
 
   let prevPost = postIndex > 0 ? getBlogPosts()[postIndex - 1] : null; // 이전 포스트 찾기
   let nextPost =
@@ -79,7 +77,7 @@ export default async function Blog({ params }) {
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
             {formatDate(post.metadata.publishedAt, false).fullDateEN}
           </p>
-          <Suspense>
+          <Suspense fallback={<ViewsSkeleton />}>
             <ViewCount slug={post.slug} />
           </Suspense>
         </div>
