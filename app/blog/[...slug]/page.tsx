@@ -6,6 +6,7 @@ import { ViewCount } from "app/components/view-count";
 import { Suspense } from "react";
 import TocBanner from "app/components/toc-banner";
 import PostFooter from "app/components/post-footer";
+import Giscus from "app/components/giscus";
 
 // 정적 사이트 생성(SSG)을 위해 모든 블로그 게시물의 slug를 반환
 export async function generateStaticParams() {
@@ -90,6 +91,7 @@ export default async function Blog({ params }) {
         ) : (
           <PostFooter prevPost={prevPost} nextPost={nextPost} />
         )}
+        <Giscus />
       </section>
       <div className="ml-auto">
         <div className="ml-24 top-[120px] hidden min-w-[280px] max-w-[280px] self-start lg:block sticky top-0">
