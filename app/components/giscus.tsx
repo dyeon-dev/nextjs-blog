@@ -1,13 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-export default function Giscus() {
-  const ref = useRef<HTMLDivElement>(null);
+function Giscus() {
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState("light");
+  const ref = useRef<HTMLDivElement>(null);
 
-  // https://github.com/giscus/giscus/tree/main/styles/themes
-  // const theme = resolvedTheme === "dark" ? "dark" : "light";
   useEffect(() => {
     const storedTheme =
       localStorage.getItem("theme") === "dark" ? "dark" : "light";
@@ -35,30 +33,18 @@ export default function Giscus() {
     ref.current.appendChild(scriptElem);
     setMounted(true);
   }, []);
-
-  // https://github.com/giscus/giscus/blob/main/ADVANCED-USAGE.md#isetconfigmessage
-  useEffect(() => {
-    if (!mounted) return;
-
-    const iframe = document.querySelector<HTMLIFrameElement>(
-      "iframe.giscus-frame"
-    );
-    iframe?.contentWindow?.postMessage(
-      { giscus: { setConfig: { theme } } },
-      "https://giscus.app"
-    );
-  }, [theme, mounted]);
-
-  // https://github.com/giscus/giscus/blob/main/ADVANCED-USAGE.md#isetconfigmessage
-  useEffect(() => {
-    const iframe = document.querySelector<HTMLIFrameElement>(
-      "iframe.giscus-frame"
-    );
-    iframe?.contentWindow?.postMessage(
-      { giscus: { setConfig: { theme } } },
-      "https://giscus.app"
-    );
-  }, [theme]);
-
-  return <section ref={ref} />;
+  return <div ref={ref} />;
 }
+
+export default Giscus;
+
+// 테마 변경 시 즉시 Giscus 업데이트
+export const updateGiscusTheme = (newTheme: string) => {
+  const iframe = document.querySelector<HTMLIFrameElement>(
+    "iframe.giscus-frame"
+  );
+  iframe?.contentWindow?.postMessage(
+    { giscus: { setConfig: { theme: newTheme } } },
+    "https://giscus.app"
+  );
+};

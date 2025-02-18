@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { updateGiscusTheme } from "./giscus";
 
 type Theme = "light" | "dark";
 
@@ -34,6 +35,7 @@ export const ThemeSwitcher = () => {
   const handleToggle = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
     applyTheme(nextTheme);
+    updateGiscusTheme(nextTheme);
   };
 
   return (
