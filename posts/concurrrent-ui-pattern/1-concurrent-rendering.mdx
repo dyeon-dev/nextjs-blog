@@ -7,7 +7,7 @@ summary: "React 18의 Suspense, ErrorBoundary와 React team의 지향점"
 서비스를 사용하는 유저들에게 더 나은 좋은 경험을 제공하기 위한 기술적 고민을 했다.
 
 그 결과,
-**디자인 시스템**을 도입함으로써 사용자보다는 "**개발자 경험**"을 향상시켜주었다면, **Concurrent Rendering**을 도입함으로써 개발자보다는 "**사용자 경험**"을 향상시켜주었다. _(사실 디자인 시스템이나 Concurrent나 모두 사용자, 개발자 경험을 향상했지만 굳이 따지자면 그렇다는 것이다.)_
+**디자인 시스템**을 도입함으로써 사용자경험보다는 "**개발자 경험**"을 향상시켜주었다면, **Concurrent Rendering**을 도입함으로써 개발자보다는 "**사용자 경험**"을 향상시켜주었다. _(사실 디자인 시스템이나 Concurrent나 모두 사용자, 개발자 경험을 향상했지만 굳이 따지자면 그렇다는 것이다.)_
 
 React 18 버전에서 release된 **Concurrent Rendering**이라는 기능은 사실 *Concurrent Mode*로서 처음 세상에 나오게 됐었는데, 현재는 **Concurrent Mode 라는 단어는 다음과 같은 이유로 사용하지 않는다**고 React 팀에서 발표했다.
 
@@ -113,7 +113,7 @@ function Page() {
 React Suspense of Data Feteching은 React 팀에서 다음과 같은 목표를 추구한다.
 
 - 간단히 말해, async-await 급으로 비동기 처리하며 간단하고 가독성 좋은 리액트 컴포넌트를 만드는 것이다.
-- 즉, 컴포넌트는 **성공한 상태**만 다루고, **로딩 상태와 에러 상태는 외부에 위임(분리)**함으로써 동기적인 코드와 큰 차이가 없는 코드를 만든다.
+- 즉, 컴포넌트는 **성공한 상태**만 다루고, **로딩 상태와 에러 상태는 외부에 위임(분리)** 함으로써 동기적인 코드와 큰 차이가 없는 코드를 만든다.
 
 사용 방식은 아주 간단하다. 함수의 에러 처리를 감싸는 catch문에서 하는 것처럼 로딩 상태와 에러 처리도 컴포넌트를 사용하는 곳에서 해주면 된다.
 
@@ -143,9 +143,17 @@ React Suspense of Data Feteching은 React 팀에서 다음과 같은 목표를 �
   </ErrorBoundary>
   ```
 
-모든 실패할 수 있는 경우에 try-catch문을 감싸지 않는 것처럼 Suspense를 일으키는 모든 컴포넌트에 Suspense나 ErrorBoundary를 붙여주기보다는, 적당한 부분 단위로 에러와 로딩 상태를 한번에 처리하면 된다.
+# Suspense
 
-이를 사용하기 위한 비동기 처리 라이브러리인 SWR이나 Tanstack-query에서는 `{suspense: true}` 옵션을 사용해주면 된다.
+[Suspense 공식문서](https://react.dev/reference/react/Suspense)
+
+Suspense를 사용하기 위한 비동기 처리 라이브러리인 SWR이나 Tanstack-query에서는 `{suspense: true}` 옵션을 사용해주면 된다.
+
+`<Suspense>`를 사용하면 자식 컴포넌트가 완료될 때까지 fallback UI를 표시할 수 있다. React 16.6에서 실험적 기능으로 추가됐었는데 18 버전에서 정식 기능으로 업데이트 되었다.
+
+Suspense를 사용하면 비동기 데이터가 로딩중일 때와 사용 가능할 때를 "선언적"으로 분리해서 처리할 수 있다.
+명령형이 아닌 선언형으로 컴포넌트를 분리하여 처리함으로써 관심사의 분리와 더욱 간결한 코드를 작성할 수 있게 되었다.
+여기서 말하는 명령형, 선언형은 다음 카카오페이의 [기술 블로그](https://tech.kakaopay.com/post/react-query-2/#%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%8E%98%EC%9D%B4-%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C-%ED%8C%80%EC%9D%B4-concurrent-ui-pattern%EC%9D%84-%EB%8C%80%ED%95%98%EB%8A%94-%EB%B0%A9%EC%8B%9D) 글을 보면 이해가 빠를 것이다!
 
 ---
 

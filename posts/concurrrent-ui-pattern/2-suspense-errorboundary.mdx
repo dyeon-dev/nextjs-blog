@@ -1,0 +1,226 @@
+---
+title: "Suspense와 ErrorBoundary로 선언적 컴포넌트 만들기"
+publishedAt: "2025-02-14"
+summary: "Suspense로 스켈레톤 UI 적용부터 Lazy 처리까지, ErrorBoundary로 에러 대응까지"
+---
+
+이전 글에서 이야기했던 것처럼 Concurrent의 **동시성** 개념은 **복잡한 UI의 상호작용을 처리**하는 데에 있어서 효과적이다.
+
+React 18 버전 이상부터의 Suspense와 ErrorBoundary를 통해 동시성을 보장할 수 있다.
+
+그렇다면 리액트에서 사용되는 동시성을 보장할 수 없는 데이터 패칭 전략들부터 살펴보고, Suspense를 도입하기 이전의 문제와 어떤식으로 해결할 수 있는지 살펴보도록 하자.
+
+### 클라이언트 사이드 데이터 패칭 (CSR)
+
+이전에는 주로 다음 코드와 같이 **로딩중, 에러발생, 데이터 패치 성공**의 경우를 모두 나눠 state로 관리하고 useEffect를 사용하여 데이터를 가져와 UI를 업데이트하는 방식을 사용했다.
+
+이렇게 되면 한 컴포넌트 안에 **모든 비즈니스 로직**이 다 포함되었다고 할 수 있다.
+
+또한, 이러한 코드 작성 방식은 **명령형 컴포넌트**를 사용한 방식으로, 명령형 컴포넌트란 UI를 <u>어떻게(HOW) 보여줄 것이냐</u>에 집중하고 있는 방식이다.
+
+#### 🚨 Suspense 이전의 방식 (Fetch-on-render)
+
+```
+import { useState, useEffect } from "react";
+
+function UserProfile({ userId }: { userId: string }) {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState();
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(getUser)
+      .then((res) => res.json())
+      .then((data) => {
+        setUser(data);
+        setLoading(false);
+        setError(undefined);
+      });
+  }, [userId]);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <div>문제가 발생하였습니다.</div>
+  return <div>{user?.name}</div>;
+}
+```
+
+#### 문제점
+
+❌ 위 코드는 명령형 컴포넌트로 다음과 같은 문제점이 있다.
+
+1. **렌더링 후 데이터 패칭**: 첫 번째 렌더링 때는 user가 null이므로, UI가 먼저 렌더링된 후 데이터가 로드됨. 결과적으로, 화면이 깜빡이는 (layout shift) 문제가 발생할 수 있음.
+
+2. **로딩 상태 관리가 필요함**: useState로 loading을 추가해서 로딩 여부를 체크해야 함. 여러 개의 데이터를 패칭할 경우, 각각의 상태를 관리해야 해서 복잡도가 증가함.
+
+3. **Waterfall 현상 발생**: 여러 데이터를 패칭할 경우, 각각 따로 요청이 이루어지고, 데이터가 준비된 순서대로 UI가 업데이트됨. 이런 방식이 계층별로 반복되면 데이터 패칭도 순차적으로 일어나면서 렌더링 성능에 나쁜 영향을 끼치게 됨.
+
+# Suspense로 해결하기
+
+[Suspense 공식문서](https://react.dev/reference/react/Suspense)
+
+Suspense를 사용하면 **선언형 컴포넌트**를 사용한 React 컴포넌트로서 활용할 수 있다.
+
+선언형 컴포넌트를 사용하면 <u>무엇을(WHAT) 보여줄 것이냐</u>에 집중한다.
+
+Suspense를 사용하면 비동기 데이터가 로딩중일 때와 사용 가능할 때를 "선언적"으로 분리해서 처리할 수 있다.
+명령형이 아닌 선언형으로 컴포넌트를 분리하여 처리함으로써 관심사의 분리와 더욱 간결한 코드를 작성할 수 있게 되는 것이다.
+여기서 말하는 명령형, 선언형은 다음 카카오페이의 [기술 블로그](https://tech.kakaopay.com/post/react-query-2/#%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%8E%98%EC%9D%B4-%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C-%ED%8C%80%EC%9D%B4-concurrent-ui-pattern%EC%9D%84-%EB%8C%80%ED%95%98%EB%8A%94-%EB%B0%A9%EC%8B%9D) 글을 보면 이해가 빠를 것이다!
+
+이렇게 리액트에서 선언형 컴포넌트 구성을 위한 바탕으로 Suspense와 ErrorBoundary 구성요소를 사용할 수가 있다.
+
+#### ✅ Suspense를 활용한 데이터 패칭 방식
+
+`<Suspense>`를 사용하면 자식 컴포넌트가 완료될 때까지 **fallback UI**를 표시할 수 있다. React 16.6에서 실험적 기능으로 추가됐었는데 18 버전에서 정식 기능으로 업데이트 되었다.
+
+React의 **Suspense**와 **React.lazy()** 를 사용하면 데이터가 로드될 때까지 UI가 렌더링을 잠시 멈출 수 있다.
+
+여기서 React.lazy()를 사용하면 Code Splitting을 통해 **비동기적으로 컴포넌트를 로드**할 수 있다.
+
+`<Suspense fallback={<p>Loading...</p>}>` 이 부분이 핵심인데, 데이터가 로드될 때까지 로딩 UI를 유지한 채 전체 UI의 일관성을 유지할 수 있다.
+
+```
+import { Suspense } from "react";
+
+const UserProfile = React.lazy(() => import("./UserProfile"));
+
+function App() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <UserProfile userId="1" />
+    </Suspense>
+  );
+}
+```
+
+#### Suspense + React의 새로운 데이터 패칭 전략 (use() API)
+
+React 18부터는 use() API를 활용해서 Suspense와 데이터 패칭을 자연스럽게 결합할 수 있다.
+
+```
+const fetchUser = async (userId: string) => {
+  return fetch(getUser).then(res => res.json());
+};
+
+const userPromise = fetchUser("1");
+
+function UserProfile() {
+  const user = use(userPromise);
+  return <div>{user.name}</div>;
+}
+
+function App() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <UserProfile />
+    </Suspense>
+  );
+}
+```
+
+#### Suspense 장점
+
+- 초기 렌더링을 막고 데이터가 준비될 때까지 기다릴 수 있음 → 깜빡임 문제 해결
+- 컴포넌트마다 로딩 상태를 관리할 필요 없음 → useState / useEffect 불필요 (가독성 향상)
+- 여러 개의 데이터 패칭을 병렬로 수행할 수 있어 빠름
+
+## Suspense로 스켈레톤 UI 노출시키기
+
+데이터 패치 혹은 Code Splitting을 통해 분리되어 있는 번들을 불러오는 동안 사용자에게 스켈레톤 UI를 보여줘서 안정성을 높이는 방식은 아주 간단하다.
+
+![suspense-skeleton](/images/posts/3-concurrent-feature/2-1.png)
+
+크게 2가지 영역의 대해 스켈레톤 UI를 적용했다.
+
+1. 영화 정보에 대해 **무한스크롤이 적용되는 컴포넌트**
+
+   이 코드는 모든 영화 포스터를 **무한 스크롤**로 출력하는 페이지로 `useMovieTrendingQuery`을 통해 12개씩 데이터를 불러오는 코드이다. 12개씩 불러오면서 Section 컴포넌트에 데이터를 전달해준다.
+
+   ```
+   const Index = () => {
+     const pageSize = 2;
+
+     const { moviesData, isLoading } = useMovieTrendingQuery();
+
+     if (isLoading) {
+       // 초기 로딩 시 스켈레톤 12개 렌더링
+       return (
+         <>
+           {Array.from({ length: pageSize }).map((_, index) => (
+             <MoviePageSkeleton key={`initial-skeleton-${index}`} />
+           ))}
+         </>
+       );
+     }
+
+     return (
+       <Section items={moviesData?.data.movies || []} />
+     );
+   };
+
+   export default Index;
+
+   ```
+
+2. 메인페이지에서 **총 2개의 API를 호출하는 컴포넌트**
+
+   React 문서에 따르면 Suspense를 **Lazy loading**과 적극 사용하도록 권장하고 있다.
+
+   프로젝트를 진행하면 규모가 커지면서 컴포넌트 개수가 기하급수적으로 늘어난다. 이때 code splitting을 위해 Lazy 처리를 진행하면 **번들링에 최적화** 효과를 줄 수 있다.
+
+   **code splitting**은 코드를 분할하는 것으로 코드를 번들된 코드 혹은 컴포넌트로 분리하는 것을 얘기한다.
+
+   번들 파일 크기가 크면 로딩이 오래걸리게 되고, 그럴수록 UX를 해치기 마련이다. 따라서 모듈 번들러를 이용해 만들어진 하나의 번들 파일을 여러 개로 나누는 작업을 하고, 그 과정에서 사용자에게 **스켈레톤 UI**를 보여주도록 했다.
+
+   ```
+   import { Suspense } from 'react';
+   import * as Lazy from '@/routes/lazy';
+
+   const Screens = {
+     Main: {
+       path: '/',
+       element: (
+         <Suspense fallback={<MainPageSkeleton />}>
+           <Lazy.MainPage />
+         </Suspense>
+       ),
+     },
+   }
+   ```
+
+# ErrorBoundary
+
+지금까지 Suspense를 이용한 선언형 컴포넌트를 다뤘으니, 이제 **ErrorBoundary를 이용한 선언형 컴포넌트**에 관련된 이야기를 해보겠다!
+
+ErrorBoundary를 통해 API 에러를 처리함으로써 컴포넌트에서는 데이터를 불러오고 그 데이터를 화면에 보여주는 것에만 오롯이 관심을 갖게 되고, 데이터를 불러오는 상황이나 에러가 발생한 상황에서의 화면은 **부모 컴포넌트에서 책임**을 지게 된다.
+
+이렇게 **관심사를 분리**함으로써 컴포넌트 내부에 에러처리에 대한 로직이 포함되지 않기 때문에 **코드의 복잡도가 줄어드는 장점**을 갖게 된다.
+
+```
+import { ErrorBoundary } from 'react-error-boundary';
+
+const AppPages = () => {
+
+  return (
+    <>
+      <ToastContainer />
+
+          <ErrorBoundary FallbackComponent={FallbackUI}>
+            <Routes>
+              {Object.entries({ ...AppRouteDef }).map(([name, { path, element }], index) => (
+                <Route key={name + index} path={path} element={element} />
+              ))}
+            </Routes>
+          </ErrorBoundary>
+    </>
+  );
+};
+
+export default AppPages;
+```
+
+이렇게 **App 최상단**에 ErrorBoundary를 감싸주면 애플리케이션에서 에러가 발생했을 시, React 내부 로직이 에러를 캐치하여 **FallbackUI 컴포넌트를 렌더링**하게 된다.
+
+하지만 에러 상황은 굉장히 다양하게 있을 것이다. 기본적인 HTTPS 상태코드부터, 서비스 코드까지 애플리케이션 상황에 따라 요구되는 에러 처리가 다를 것이다. 따라서 세부적으로 에러 노출 방식을 나눠서 사용자에게 에러 상황을 명확하게 알 수 있도록 하고, 어떻게 대응할지 FallbackUI를 통해 보여준다.
+
+이 에러처리 요구사항에 대해서는 다음 글에 이어서 작성해보도록 하겠다 !! 😎
