@@ -33,7 +33,7 @@ function Giscus() {
     ref.current.appendChild(scriptElem);
     setMounted(true);
   }, []);
-  return <div ref={ref} />;
+  return <div className="mt-8" ref={ref} />;
 }
 
 export default Giscus;

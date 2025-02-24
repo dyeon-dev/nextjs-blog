@@ -1,0 +1,425 @@
+---
+title: "TanStack Query API 에러 핸들링"
+publishedAt: "2025-02-16"
+summary: "ToastUI와 FallbackUI로 상태코드에 따른 에러 핸들링하기"
+---
+
+## 문제 상황
+
+프로젝트에 API 처리 방식으로 데이터 캐싱을 위한 TanStack-query를 도입하면서, 체계를 잡기 위해 데이터 로직을 UI 컴포넌트와 분리시켰다.
+
+그래서 API 에러는 TanStack-query에서 지원하는 onError 이벤트 리스너를 이용하여 감지할 수 있다. 그렇게 onError 부분에 에러처리를 하는데 문제가 발생했다.
+
+**여러 군데에서 비슷한 에러 처리 로직을 개별적으로 작성**하거나 **공통적으로 다루어져야 하는 로직에서 반복적으로 작성**되는 경우가 발생했다.
+
+따라서 에러 처리를 위해 가장 먼저 한 일은, **ErrorBoundary**를 앱 최상단에 감싸서 **에러 상황에서 FallbackUI를 노출**되게끔 하였다.
+
+하지만 모든 에러 상황에서 FallbackUI가 노출되면 안될 것이다. 모든 에러 상황이 모두 같은 에러 상황이 아니기 때문이다.
+
+예를 들어, API 에러로 400, 401, 403, 500 등등.. 서버에서 **HTTP 고유의 상태코드**에 따른 값을 받을 것이다. 혹은 서비스 코드(서버에서 직접 지정하는 코드)를 내려 받을 수도 있다.
+
+이런 여러가지 **에러에 대해 체계를 잡고 대응하기 위해서 에러핸들링을 설계**하였고, 목표는 크게 2가지였다.
+
+# 에러핸들링
+
+![error-handling](/images/posts/3-concurrent-feature/3-1.png)
+
+1. **에러 메시지 디자인 UI 통일**
+
+   - 에러와 같은 상황에서 공통적으로 사용할 수 있도록 **Toast 컴포넌트를 개발**한다.
+   - 접근 권한 에러(401, 403), 존재하지 않는 URL 에러(404), 서버 에러(500, 502)의 경우 **3가지 버전의 Fallback UI 개발**하여 ErrorBoundary로 처리한다.
+
+2. **useApiError(Custom Hook)을 사용하여 상태 코드에 따라 에러 처리 집중화**
+   - 서버에서 받은 API의 HTTP 상태 코드에 따라 **커스텀 에러 처리**를 적용하여 모든 에러 상황에 대비한다.
+
+## 🏳️ 1. 에러 메시지 디자인 UI 통일
+
+첫번째로 사용자에게 알리기 위한 에러 메시지 UI를 통일시키기 위해 먼저 **디자인 시스템에서 Toast 컴포넌트**를 구현했다.
+
+성공 시 리다이렉트하거나 toast 메시지를 띄우는 방식으로 개선하고 성공/실패 시 추가적인 사용자 경험을 제공한다.
+
+### 개발과정
+
+디자인 시스템에서 구현해둔 Toast 메시지를 사용했다.
+
+다음은 이 Toast 메시지를 애플리케이션에서 사용할 수 있도록 설정하는 과정을 설명할텐데, <u>상태코드에 따른 에러핸들링 과정만 궁금하다면 이 내용은 스킵해도 좋다-!</u>
+
+### useToastStore 상태 관리 구현
+
+Toast 메시지를 전역적으로 사용하기 위한 상태관리를 해준다.
+
+상태관리 라이브러리로 **Zustand**를 사용했기 때문에 `useToastStore`를 생성해준다. **toast 상태를 관리하기 위한 store**이다.
+
+```
+// src/stores/useToastStore.ts
+
+import { create } from 'zustand';
+
+export interface Toast {
+  id: number;
+  variant: 'default' | 'success' | 'error';
+  message: string;
+}
+
+interface ToastStore {
+  toastList: Toast[];
+  addToast: (toast: Omit<Toast, 'id'>) => void;
+  removeToast: (id: number) => void;
+}
+
+export const useToastStore = create<ToastStore>((set) => ({
+  toastList: [], // 현재 표시 중인 모든 Toast 메시지의 배열
+  addToast: (toast) => {
+    const id = Date.now(); // Toast를 고유하게 식별하기 위한 ID
+    set((state) => ({
+      toastList: [...state.toastList, { id, ...toast }],
+    }));
+  },
+  removeToast: (id) => {
+    set((state) => ({
+      toastList: state.toastList.filter((toast) => toast.id !== id),
+    }));
+  },
+}));
+```
+
+주요 코드를 설명하자면,
+
+- `toastList`: 현재 표시 중인 Toast 메시지의 배열
+- `addToast`: 새로운 Toast 메시지를 toastList에 추가
+- `removeToast`: 특정 id를 기준으로 Toast 메시지 제거
+
+이는 단순하고 확장성이 좋아, 향후 Toast 메시지에 대한 다양한 상태(예: `type`이나 `color`)를 추가하거나 자동 제거 기능 등을 쉽게 구현할 수 있다.
+
+## ToastContainer 구현
+
+`ToastContainer`에서는 Zustand에서 Toast 데이터를 가져와 **Toast 컴포넌트를 렌더링**한다.
+
+```
+// src/components/common/ToastContainer.tsx
+
+import { Toast } from 'pov-design-system';  // 디자인 시스템의 Toast 컴포넌트 사용
+import { useToastStore } from '@/stores/useToastStore';
+
+const ToastContainer = () => {
+  const { toastList, removeToast } = useToastStore();
+
+  return (
+    <>
+      {toastList.map(({ id, message, ...attributes }) => (
+        <Toast key={id} onClose={() => removeToast(id)} {...attributes}>
+          {message}
+        </Toast>
+      ))}
+    </>
+  );
+};
+
+export default ToastContainer;
+```
+
+그리고 ToastContainer를 **최상단 컴포넌트**에 추가해준다.
+
+```
+import ToastContainer from '@/components/common/ToastContainer/ToastContainer';
+
+const AppPages = () => {
+
+  return (
+    <>
+      <Padded>
+       <ToastContainer />
+      </Padded>
+      <Routes>
+        {Object.entries({ ...AppRouteDef }).map(([name, { path, element }], index) => (
+          <Route key={name + index} path={path} element={element} />
+        ))}
+      </Routes>
+    </>
+  );
+};
+```
+
+### useToast hook 구현
+
+컴포넌트에서 쉽게 사용할 수 있도록 `useToast`을 만들어주면 Toast 메시지를 사용할 준비를 마친 것이다~!
+
+```
+// src/hooks/common/useToast.ts
+
+import { useToastStore } from '@/stores/useToastStore';
+
+export const useToast = () => {
+  const addToast = useToastStore((state) => state.addToast);
+
+  const createToast = (message: string, variant: 'default' | 'success' | 'error' = 'error') => {
+    addToast({ variant, message });
+  };
+
+  return { createToast };
+};
+```
+
+### 사용법
+
+훅을 만들었기 때문에 사용법은 간단하다.
+
+앞서 만든 Zustand 기반 useToast 훅을 활용하여 사용해서 컴포넌트에서 자유롭게 사용하면 된다.
+
+TanStack Query에서 API 에러 처리를 위해서는 다음과 같이 `onError`에서 Toast를 추가한다.
+뿐만 아니라, `onSuccess`의 경우에도 Toast를 추가해서 **상황에 따라 유저에게 알맞은 정보를 제공**하면 된다.
+
+속성 값으로 'default' | 'success' | 'error' 3가지의 다른 컬러로 속성을 정의해뒀기 때문에 상황에 맞게 사용할 수 있다.
+
+```
+export const useLikeMovieMutation = () => {
+  const queryClient = useQueryClient();
+  const { createToast } = useToast();
+
+  const likeMutation = useMutation({
+    mutationFn: postLike,
+    onSuccess: (_, { movieId }) => {
+      queryClient.invalidateQueries({ queryKey: ['movies', movieId] });
+      createToast('좋아요 성공!', 'success');
+    },
+    onError: () => {
+      createToast('좋아요에 실패했어요. 다시 시도해주세요.', 'error');
+    },
+  });
+
+  return likeMutation;
+};
+```
+
+작동원리를 정리하자면 다음과 같다.
+
+1. `useToast` 훅을 통해 Toast 메시지를 추가한다.
+2. Toast가 상태(`toastList`)에 추가되면 `ToastContainer`가 이를 렌더링한다.
+3. Toast의 닫기 버튼(`onClose`) 또는 시간이 경과하면 `removeToast`를 호출하여 상태에서 제거된다.
+
+## 🚩 2. 사용한 상태 코드 에러 처리
+
+앱 최상단에 ErrorBoundary 처리를 했기 때문에 모든 에러가 FallbackUI로 처리되고 있었다.
+
+앞서 이야기한 것처럼 모든 에러에 대해 FallbackUI로 보여주는 것이 아니라 상황에 따라 **커스텀이 가능**하게끔 해야될 것이다.
+
+따라서 서버에서 내려주는 에러 코드에 따라 `useApiError` 훅으로 **분기 처리**를 하여 **상황별 에러 처리 로직**을 수행하도록 했다.
+
+### 에러 처리 흐름
+
+1. _에러 발생_: 에러가 발생하면 TanStack query의 onError 이벤트 리스너를 통해서 API 에러 상황을 감지하고 에러 객체를 획득한다.
+2. _에러 종류 파악_: 에러를 파싱하여 서비스의 표준 에러 응답인지, 네트워크 에러인지를 판단한다.
+3. _상황별 에러 처리_: HTTP Status와 서비스 표준 에러 코드로 분기하여 상황별 에러 처리 로직을 수행한다. 만약 Toast 메시지를 띄워야 하는 에러 상황이 있다면 상황별 에러 처리 로직에서 적절한 메시지를 지정하여 보여준다.
+4. _공통 처리_: 모든 에러 상황에서 동일하게 수행해야 하는 로직을 수행한다.
+
+백엔드 팀과 논의했을 때 서비스 표준 에러 코드는 사용하지 않기로 했기 때문에, **HTTP 상태 코드**로 다음 에러들만 정의하도록 하였다.
+
+```
+export const HTTP_STATUS_CODE = {
+  SUCCESS: 200,
+  CREATED: 201,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  INTERNAL_SERVER_LOGIC_ERROR: 500,
+  INTERNAL_SERVER_ERROR: 502,
+} as const;
+```
+
+### 클라이언트 동작 (useApiError 정의)
+
+위의 에러처리 흐름을 코드로 분산시키지 않고 모아서 작성한다. React를 사용하고 있으니 **Hook**으로 에러 처리 흐름의 주요 로직을 작성하면 좋을 것이다.
+
+Hook 내부에서는 상황별로 어떤 에러 핸들러를 수행할지 결정하는 부분이 중요하다. 그 결정은 아래 조건에 따른다.
+
+1. 위의 상태 코드에 따라 **우선순위를 부여해서 핸들러 실행**
+
+   에러 발생 시 `useApiError`가 제공하는 `handleError` 함수는 다음 우선순위에 따라 핸들러를 실행한다.
+
+   - **1순위:** 컴포넌트에서 커스텀한 **`(HTTP 상태)`** 핸들러
+   - **2순위:** 기본 핸들러에서 정의한 **`(HTTP 상태)`** 핸들러
+   - **3순위:** 정의되지 않은 에러에 대한 기본 핸들러
+
+2. **공통 처리 로직**
+
+   우선순위에 따른 에러를 처리한 후에 `defaultHandlers.common()`을 호출하여 공통 로직을 실행한다.
+
+에러 처리 Hook은 커스텀 훅으로, `useApiError` 이름으로 작성한다. **에러 처리 흐름의 주요한 부분들을 Hook에서 모두 담당**하여 개별 컴포넌트에서는 에러 처리와 분리되게끔 한다.
+
+```
+// src/queries/useApiError.ts
+
+import { useCallback } from 'react';
+import { HTTP_STATUS_CODE } from '@/constants/api';
+
+// 기본 핸들러 정의
+const defaultHandlers: DefaultHandlers = {
+  common: () => {
+    console.log('공통 처리 로직 수행');
+  },
+  default: () => {
+    console.error('정의되지 않은 에러입니다.');
+  },
+[HTTP_STATUS_CODE.BAD_REQUEST]: {
+    default: () => {
+      console.error('400 bad validation - 올바르지 않은 데이터 형식');
+    },
+  },
+  [HTTP_STATUS_CODE.UNAUTHORIZED]: {
+    default: () => {
+      console.error('401 Unauthorized - 로그인 인증 필요');
+    },
+  },
+  [HTTP_STATUS_CODE.FORBIDDEN]: {
+    default: () => {
+      console.error('403 Forbidden - 접근 권한 없음');
+    },
+  },
+  [HTTP_STATUS_CODE.NOT_FOUND]: {
+    default: () => {
+      console.error('404 Not Found - 존재하지 않는 URL');
+    },
+  },
+  [HTTP_STATUS_CODE.CONFLICT]: {
+    default: () => {
+      console.error('409 Conflict - 리소스 충돌');
+    },
+  },
+  [HTTP_STATUS_CODE.INTERNAL_SERVER_LOGIC_ERROR]: {
+    default: () => {
+      console.error('500 Internal Server Logic Error');
+    },
+  },
+  [HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR]: {
+    default: () => {
+      console.error('502 Internal Server Error');
+    },
+  },
+};
+
+export const useApiError = (handlers: Record<string, any> = {}) => {
+  const handleError = useCallback(
+    (error: any) => {
+      const httpStatus = String(error.status || 'default'); // HTTP 상태 코드
+
+           if (handlers[httpStatus]?.default) {
+        // 우선순위 1: 컴포넌트에서 커스텀한 (HTTP 상태) 핸들러
+        handlers[httpStatus].default();
+      } else if (typeof defaultHandlers[httpStatus] === 'object') {
+        // 우선순위 2: 기본 핸들러에 정의한 (HTTP 상태) 핸들러
+        (defaultHandlers[httpStatus] as { default: () => void }).default();
+
+        // ErrorBoundary로 에러를 전파
+        setError(error as Error);
+      } else {
+        // 우선순위 3: 정의되지 않은 에러
+        defaultHandlers.default();
+
+        // ErrorBoundary로 에러를 전파
+        setError(error as Error);
+      }
+
+      // 공통 처리 로직
+      defaultHandlers.common(error);
+
+    },
+    [handlers]
+  );
+
+  // J.E 실행 컨텍스트에 에러 전파
+  if(error) {
+    throw error;
+  }
+  return { handleError };
+};
+```
+
+### QueryClient 설정
+
+useApiError의 handleError를 **QueryClient의 onError 옵션**에 적용해줘서 Default Error Handler를 전달할 수 있게 해준다.
+
+Mutation과 queryCache 레벨의 두 영역에 에러처리로 적용한다.
+
+```
+import { QueryCache, QueryClient } from '@tanstack/react-query';
+import { useApiError } from "@/useApiError";
+
+const { handleError } = useApiError();
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    mutations: {
+      onError: handleError,
+    },
+  },
+  queryCache: new QueryCache({
+    onError: handleError,
+  }),
+});
+```
+
+### API 요청에 에러 커스텀 처리
+
+이제 컴포넌트에서 **특정 HTTP 상태 코드를 기반으로 에러 처리 로직을 재정의**할 수 있다.
+
+`onError` 부분에 `handleError`을 선언해주면, 해당 에러에 대한 처리가 `useApiError` hook을 호출하면서 handlers를 통한 커스텀 에러로 처리가 이뤄진다!
+
+```
+export const useDeleteReviewMutation = () => {
+  const queryClient = useQueryClient();
+  const { createToast } = useToast();
+  const { handleError } = useApiError({
+    404: { // 커스텀 에러
+      default: () => {
+        createToast('페이지를 찾을 수 없습니다.');
+      },
+    },
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: deleteReview,
+    onError: (error) => {
+      // 에러 핸들링
+      handleError(error);
+    },
+  }
+  );
+
+  return deleteReviewMutation;
+};
+```
+
+**_☝🏻 이렇게 하면 API 호출 중 발생하는 모든 에러를 통합 처리할 수 있다!!_**
+
+☝🏻 또한 동일한 에러 코드라도 **API의 요청마다 다른 에러 처리 로직 필요할 때 우선 순위의 에러 핸들링을 통해서 커스터마이즈가 가능하다!**
+
+hook을 사용한 에러핸들링으로 다음과 같은 이점을 얻게 된다.
+
+- **유연성**
+  : 컴포넌트마다 필요한 핸들러를 덮어쓰거나 기본 핸들러를 사용할 수 있다.
+- **중앙 집중화**
+  : 기본 에러 핸들러를 한 곳에 정의하여 재사용성을 높인다.
+- **가독성**
+  : 명확한 우선순위 체계를 통해 에러 핸들링 로직이 깔끔해진다.
+
+## 핵심 구조
+
+에러핸들링을 적용한 핵심 구조는 다음과 같다.
+
+1. 커스텀 에러 객체를 사용한 분기
+
+2. 커스텀 에러 객체로 우선순위로 부여
+
+에러 처리 흐름: **api 요청 중 에러 → RequestError → 에러핸들링 시 우선순위 선택 → useApiError → Toast UI / Fallback UI**
+
+이렇게 해서 모든 팀원이 일관된 에러 처리를 할 수 있도록 기반을 다졌고, 지속 가능한 프로젝트로 나아갈 수 있도록 하였다.
+
+이것보다 더 좋은 에러핸들링 설계가 있을 수도 있고 기준은 바뀔 수 있다. 하지만 직접 프로젝트에 에러핸들링 과정을 적용해봄으로써 **에러처리에 대한 중요성**을 알게 되었고, **사용자 경험이 더욱 향상되는 서비스로 제공**할 수 있던 경험이라 굉장히 의미있었다 🙌🏻
+
+## 🔎 참고 자료
+
+- [화해 기술 블로그](https://blog.hwahae.co.kr/all/tech/tech-tech/7867)
+- [React-Query-API-Error-Handling](https://velog.io/@ajm0718/React-Query-API-Error-Handling)

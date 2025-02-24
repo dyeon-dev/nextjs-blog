@@ -15,7 +15,7 @@ export default function Page() {
       <p className="mb-4">{`🌱 언제나 배우고, 나누고, 성장하고 싶습니다.`}</p>
 
       <h1 className="mt-8 text-xl font-semibold tracking-tighter">Skills</h1>
-      <p className="mt-4">{`React, Vue, JavaScript, TypeScript, HTML5, CSS3`}</p>
+      <p className="mt-4">{`React, TypeScript, react-query, Vue.js, Storybook, Supabase`}</p>
 
       <div className="my-4">
         <BlogPosts />
