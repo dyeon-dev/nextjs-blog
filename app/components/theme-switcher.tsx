@@ -21,9 +21,9 @@ export const ThemeSwitcher = () => {
   }, []);
 
   const applyTheme = (nextTheme: Theme) => {
+    setTheme(nextTheme);
     if (localStorage.getItem("theme") === nextTheme) return;
 
-    setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     if (nextTheme === "dark") {
       document.documentElement.classList.add("dark");

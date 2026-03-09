@@ -7,15 +7,18 @@ export default function Page() {
         DaYeonKim
       </h1>
       <p className="mb-4">
-        {`🏃‍♀ 새로운 기술과 도구에 대한 열정으로 끊임없이 성장하는 개발자가 되기 위해 노력합니다.`}
+        {`📌 '왜?'라는 질문을 통해 근거 있는 설계를 지향합니다.`}
       </p>
       <p className="mb-4">
-        {`👩🏻‍💻 사용성 / 사용자 경험(UX)을 중점으로 의미있는 가치를 만들어 나가는 개발자가 되고 싶습니다.`}
+        {`설계에는 논리를 담지만 완벽한 코드는 없기 때문에 테스트 코드와 코드 리뷰의 중요성을 깨달아가고 있습니다.`}
       </p>
-      <p className="mb-4">{`🌱 언제나 배우고, 나누고, 성장하고 싶습니다.`}</p>
+      <p className="mb-4">{`공부한 내용을 정리하고, 여러 사람들과의 공유와 스스로의 이해를 위해 개발일지를 작성합니다.`}</p>
+      <p className="mb-4">{`단순히 기능 구현에 그치지 않고, 수치로 증명되는 성능 개선에 집요하게 파고듭니다.`}</p>
+      <p className="mb-4">{`또한 개발자 경험(DX)의 향상이 곧 사용자 경험(UX)의 품질로 이어진다고 믿으며,
+비효율적인 프로세스를 점진적으로 개선해 나가는 것을 즐깁니다.`}</p>
 
       <h1 className="mt-8 text-xl font-semibold tracking-tighter">Skills</h1>
-      <p className="mt-4">{`React, TypeScript, react-query, Vue.js, Storybook, Supabase`}</p>
+      <p className="mt-4">{`React, TypeScript, React-Query, NestJS, MySQL, MongoDB, Node.js`}</p>
 
       <div className="my-4">
         <BlogPosts />
