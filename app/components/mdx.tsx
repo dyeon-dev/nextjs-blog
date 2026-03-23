@@ -4,6 +4,7 @@ import { MDXRemote } from "next-mdx-remote/rsc";
 import { highlight } from "sugar-high";
 import React from "react";
 import slugify from "utils/slugify";
+import remarkGfm from "remark-gfm";
 
 function Table({ data }) {
   if (!data || !data.headers) return null;
@@ -116,6 +117,27 @@ let components = {
   a: CustomLink,
   code: Code,
   Table,
+  // GFM 파이프 테이블 렌더링을 위한 HTML 요소 컴포넌트
+  table: (props) => (
+    <div className="overflow-x-auto my-4">
+      <table className="w-full border-collapse text-sm" {...props} />
+    </div>
+  ),
+  thead: (props) => <thead className="bg-neutral-100 dark:bg-neutral-800" {...props} />,
+  tbody: (props) => <tbody {...props} />,
+  tr: (props) => <tr className="border-b border-neutral-200 dark:border-neutral-700" {...props} />,
+  th: (props) => (
+    <th
+      className="px-4 py-2 text-left font-semibold text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700"
+      {...props}
+    />
+  ),
+  td: (props) => (
+    <td
+      className="px-4 py-2 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+      {...props}
+    />
+  ),
   li: (props) => {
     const { children } = props;
     if (/^\[.\]/.test(children)) {
@@ -130,6 +152,11 @@ export function CustomMDX(props) {
   return (
     <MDXRemote
       {...props}
+      options={{
+        mdxOptions: {
+          remarkPlugins: [remarkGfm],
+        },
+      }}
       components={{ ...components, ...(props.components || {}) }}
     />
   );
