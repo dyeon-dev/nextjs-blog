@@ -6,6 +6,7 @@ import React from "react";
 import slugify from "utils/slugify";
 
 function Table({ data }) {
+  if (!data || !data.headers) return null;
   let headers = data.headers.map((header, index) => (
     <th key={index}>{header}</th>
   ));
