@@ -1,0 +1,297 @@
+---
+title: "EJS 템플릿 엔진으로 SSR 구현하기"
+publishedAt: "2025-08-21"
+summary: "Express + EJS로 SSR 기반 MVC 앱을 만들며 렌더링 원리, 라우팅, 쿠키 기반 로그인 상태 관리를 직접 구현해보자"
+---
+
+# 프로젝트 배경
+
+**SSR을 기본으로 하면서 일부 인터랙션만 CSR로 처리하는 하이브리드 구조**의 프로젝트를 진행중이다.
+
+React를 사용하지 않고 **EJS 템플릿 엔진**을 사용하면 하이브리드 방식을 가능하게 해준다.
+
+즉, SSR 기반의 MVC 구조 풀스택 앱을 만들고 있다.
+React의 CSR을 경험하기 전에, '데이터 → 화면' 흐름을 서버 레벨에서 직접 추적하며 렌더링의 원리 자체를 이해할 수 있다.
+
+React는 이벤트 핸들링, DOM 조작, HTTP 요청을 추상화해버리기 때문에 **JavaScript의 핵심 개념**을 날것으로 학습하는 것을 목표로 한다.
+
+# EJS란?
+
+EJS는 **html의 태그처럼 자바스크립트 내용을 삽입**할 수 있다.
+일반 html 파일은 무조건 `<script>` 태그를 사용해서 분리시켜야하지만, EJS는 지정된 태그를 통해 스트립트 내용을 하나의 요소처럼 사용될 수 있게 한다.
+또한, **서버에서 보낸 변수를 가져와 사용할 수 있다!**
+기본 세팅은 Node.js의 Express를 사용한다.
+
+## EJS 템플릿
+
+**템플릿 엔진**: 문법과 설정에 따라 파일을 html 형식으로 변환시키는 모듈
+Embedded JavaScript의 약자로 자바스크립트가 내장되어 있는 html 파일
+
+Express+EJS 템플릿으로 HTML 렌더링하기 위해 아래 단계를 진행하자.
+
+### ejs 설치
+
+`npm install ejs`
+
+### 템플릿 엔진 설정하기
+
+`app.set("view engine", "ejs")`
+
+EJS 엔진에서는 기본적으로 views 폴더에 템플릿 파일 저장
+`app.set("views", "./views")`
+
+템플릿 파일에서 사용하는 정적 파일 제공 (CSS, JS, 이미지 등)
+`app.use(express.static('public'))`
+
+## EJS 문법
+
+### 코드를 내장시키는 `<% %>` 태그
+
+ejs에는 자바스크립트를 내장시킬 수 있는 2가지 태그가 있다.
+가장 기본은 `<% %>`이고, 이 사이에 자바스크립트 내용을 넣으면 된다.
+
+### 파일 불러오는 `<%- include() %>`
+
+`<%-include('view의 파일')%>`
+
+- 다른 view 파일을 불러올 때 사용한다.
+- 예를 들어, 공통 컴포넌트를 빼고 불러올 때 유용하게 사용할 수 있다.
+  - navbar 같은 공통 컴포넌트 로직을 따로 navbar.ejs 파일로 만들어서 main.ejs 파일에서 `<%-include('navbar') %>` 으로 불러오면 된다.
+
+### 변수의 값을 출력하는 `<%= %>`
+
+`<%= 변수 %>`
+
+- EJS는 Node(Express)에서 **`res.render(view, data)`로 넘긴 값을 템플릿에서 바로 사용**할 수 있다.
+- 방식은 심플하고 **서버사이드 렌더링(SSR)**에 잘 맞는다.
+
+#### 사용법
+
+- **컨트롤러(라우트)에서 데이터 전달**
+
+```js
+// 예: 컨트롤러
+app.get("/profile", (req, res) => {
+  res.render("profile", {
+    title: "프로필",
+    user: { username: "dyeon", nickname: "다연" },
+    posts: [
+      { id: 1, text: "hi" },
+      { id: 2, text: "hello" },
+    ],
+  });
+});
+```
+
+- **EJS에서 사용**
+
+```html
+<!-- profile.ejs -->
+<h1><%= title %></h1>
+<p>닉네임: <%= user.nickname %></p>
+
+<ul>
+  <% posts.forEach(post => { %>
+  <li><%= post.text %></li>
+  <% }) %>
+</ul>
+```
+
+## EJS로 로그인 화면 구현 및 처리하기
+
+### EJS 파일 생성 및 구현
+
+- 기존 html를 거의 그대로 사용한다.
+- 컴포넌트를 추가해야되면 `<%- include() %>`를 사용해서 원하는 부분에 추가한다.
+
+```html
+// views/login.ejs <%-include('navbar') %>
+
+<main>
+  <section class="login-section">
+    <div class="login-container">
+      <h1>로그인</h1>
+      <form action="/login">
+        <div class="form-group">
+          <label for="username">아이디</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <button type="submit" class="login-submit-btn">로그인</button>
+      </form>
+    </div>
+  </section>
+</main>
+```
+
+### EJS 파일을 불러오기 위한(로그인 화면 불러오기) 컨트롤러 및 라우터 구현
+
+html 코드를 적었으니까 이걸 보여줘야한다.
+
+/login 루트 경로 접속 시 위의 코드인 `login.ejs`가 로그인 화면으로 나타나도록 한다.
+
+1. **컨트롤러 코드 작성**
+
+- 로그인 관련 컨트롤러 함수를 작성할 `loginController.js` 파일을 생성
+- login.ejs 파일을 렌더링하는 컨트롤러 `getLogin` 함수를 구현하고 모듈로 내보냄.
+- /login 경로로 GET 요청 시 실행됨.
+
+```js
+// controllers/loginController.js
+const getLogin = (req, res) => {
+  res.render("login");
+};
+
+module.exports = {
+  getLogin,
+};
+```
+
+<br />
+
+2. **로그인 관련 라우트 코드 작성**
+
+- 로그인 관련 라우트 코드를 작성할 `loginRoutes.js` 파일을 생성함.
+- /login 경로로 GET 요청 시 `getLogin` 함수가 실행되도록 라우팅을 설정하고 라우터를 내보냄.
+
+```js
+// routes/loginRoutes.js
+const express = require("express");
+const router = express.Router();
+const loginController = require("../controllers/loginController");
+
+router.get("/login", loginController.getLogin);
+
+module.exports = router;
+```
+
+<br />
+
+3. **`app.js`에서 로그인 라우트가 실행되도록 추가**
+
+```js
+app.use("/", require("./routes/loginRoutes"));
+```
+
+### 로그인 처리 (POST 요청) 구현
+
+사용자가 아이디와 비밀번호 입력 후 로그인 클릭 시 POST 방식으로 서버에 정보를 보내도록 한다.
+
+1. **login.ejs 폼 태그의 `method`를 `post`로 설정하고 `action`을 /login 경로로 지정**
+
+```html
+<form action="/login" method="post" class="login-form"></form>
+```
+
+<br />
+2. **/login 경로로 POST 요청이 들어왔을 때 처리할 함수를 `loginController.js`에
+추가**
+
+- POST 요청을 처리하는 `postLogin` 함수를 작성하고, 요청 본문에서 사용자 아이디와 비밀번호를 가져옴
+- 임시로 아이디 'admin'과 비밀번호 '1234'가 일치하면 로그인 성공, 아니면 실패 메시지를 반환하도록 구현함 (아직 컨트롤러가 잘 작동하는지만 확인, 향후 DB로 연결 예정)
+
+```js
+// POST /login
+const postLogin = (req, res) => {
+  const { username, password } = req.body;
+  if (username === "admin" && password === "1234") {
+    res.redirect("/");
+  } else {
+    res.send("로그인 실패");
+  }
+};
+```
+
+<br />
+3. **로그인 라우트에 `postLogin` 함수를 가져와 POST 방식 /login 요청 시
+실행되도록 설정함**
+
+```js
+const { getLogin, postLogin } = require("../controllers/loginController");
+
+router.route("/login").get(getLogin).post(postLogin);
+```
+
+## EJS로 데이터 넘기기(ft.쿠키로 로그인 관리)
+
+사용자의 로그인 정보를 저장하고 navbar나 페이지에서 **로그인 여부에 따라 분기처리**를 해주어야 한다.
+로그인 상태 관리를 위해 세션없이 **쿠키로 로그인 상태를 관리**하고, **미들웨어에서 로그인 유저를 `res.locals.user`에 넣으면 모든 EJS에서 사용이 가능하다.**
+
+1. **로그인 성공 시 쿠키로 사용자 정보 저장**
+
+- username, nickname 데이터 쿠키 심기
+
+```js
+// controllers/loginController.js (성공 시)
+res.cookie(
+  "user",
+  JSON.stringify({ username: user.username, nickname: user.nickname }),
+  { httpOnly: false },
+);
+```
+
+<br />
+2. **서버에서 locals로 로그인 상태 전역 주입**
+
+- 매 요청마다 쿠키에 user가 정보가 있으면 로그인 상태이기 때문에 res.locals.user로 주입
+
+```js
+// app.js
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+
+app.use((req, res, next) => {
+  res.locals.user = req.cookies.user ? JSON.parse(req.cookies.user) : null;
+  next();
+});
+```
+
+<br />
+3. **EJS에서 분기 렌더링**
+
+- 응답 데이터에 **locals.user가 있다면**
+- **변수 문법을 사용하여 EJS 템플릿에 데이터를 넣어준다.**
+- 이렇게 구현하면 로그인 성공 후 navbar에 닉네임/글쓰기/로그아웃이 표시되고, 비로그인 시 로그인/회원가입이 표시된다.
+
+```html
+<% if (locals.user) { %>
+  <span class="user-name">안녕하세요, <%= user.nickname %>님!</span>
+  <button class="write-btn" href="#">글쓰기</a>
+  <form action="/logout" method="post">
+    <button class="logout-btn" type="submit">로그아웃</button>
+  </form>
+<% } else { %>
+  <form action="/login" method="get">
+    <button class="login-btn" type="submit">로그인</button>
+  </form>
+  <form action="/signup" method="get">
+    <button class="signup-btn" type="submit">회원가입</button>
+  </form>
+<% } %>
+```
+
+## 이 프로젝트을 통해 배운 것
+
+| **정리**                                | **React에서 대응되는 것**                           |
+| --------------------------------------- | --------------------------------------------------- |
+| `res.render('main', { post })`          | `props`로 데이터 전달                               |
+| `<% if (locals.user) { %>`              | 조건부 렌더링 `{user && <Component />}`             |
+| `<% comments.forEach(...) %>`           | `.map()` 으로 리스트 렌더                           |
+| `fetch` + DOM 직접 조작                 | `useEffect` + `setState`                            |
+| `<%-include('partials/navbar')%>`       | 컴포넌트 분리 (`<Navbar />`)                        |
+| `window.location.reload()` 으로 UI 갱신 | 왜 이게 나쁜지 이해하고 상태 관리의 필요성 체감했다 |
+
+이 프로젝트에는 아래 표에 나와있듯이 SSR / CSR 두 가지 방식이 혼재한다.
+
+| **동작**                                  | **방식**           | **코드 위치**                                  |
+| ----------------------------------------- | ------------------ | ---------------------------------------------- |
+| 페이지 최초 로드 (게시글, 댓글 초기 렌더) | **SSR**            | `res.render('main', {...})`                    |
+| 댓글 작성 후 목록 갱신                    | **CSR**            | `fetch('/comment')` 후 DOM 직접 조작           |
+| 좋아요 클릭                               | **CSR → 새로고침** | `fetch('/like')` 후 `window.location.reload()` |
+| 이전글/다음글 네비게이션                  | **SSR 재요청**     | `window.location.href = '/?index=' + (n)`      |
+
+이런 방식으로 개발을 진행해본 이유를 구체화하기 위해
+다음 글에서는 전통적인 Page 기반 서버렌더링, CSR 그리고 CSR의 보완적인 SSR 방식에 대해서 알아보도록 하겠다.

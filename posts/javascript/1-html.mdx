@@ -1,0 +1,217 @@
+---
+title: "HTML 배치를 위한 태그"
+publishedAt: "2025-08-18"
+summary: "애플, 네이버, NOL 야놀자 웹페이지 구조를 살펴보며 HTML 시맨틱 태그와 배치 레이아웃에 대해 학습하기"
+---
+
+## 1️⃣ HTML 문서의 기본 구조
+
+HTML 문서의 기본 구조는 다음과 같다. 이렇게 작성하는 건 '웹 콘텐츠를 작성할 준비가 되어있는 상태'로 만드는 작업이다.
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>여기에는 문서의 제목을 입력해주세요</title>
+  </head>
+  <body>
+    여기에 웹페이지에 표시할 콘텐츠(태그)를 입력해주세요
+  </body>
+</html>
+```
+
+HTML 코드를 보면 **계층적**이다.
+브라우저는 HTML 정보를 **tree 구조**로 보관하고 있다.
+HTML은 적절한 **tag**를 사용해서 구조를 만든다.
+
+#### `<head>` 태그
+
+- html 문서의 **meta 정보**이다.
+- `<head>`의 안에 작성되는 태그들은 웹 브라우저 화면에 표시될 콘텐츠를 나타내는 것은 아니지만, 웹페이지의 품질에 영향을 주는 중요한 정보들이다.
+- 다양한 설정 태그를 추가 입력할 수 있다.
+
+#### `<body>` 태그
+
+- 화면에 보여지기 위한 정보이다.
+- 텍스트나 이미지, 미디어 요소 등 다양한 콘텐츠들을 포함하여 웹페이지를 풍성하게 꾸밀 수 있다.
+
+## 2️⃣ 화면의 배치 (layout) 를 위한 태그
+
+실제 웹 페이지에서 이 태그들이 실제 사용된 예시를 알아보자.
+개발자도구로 elements를 확인해보면 `<body>` 안에 여러 태그들이 쓰이고 있다.
+
+> 화면에서 레이아웃 구조를 나타내기 위해서 어떤 태그를 사용할까?
+
+대표적으로 **header, section, aside, nav, footer**가 있다.
+
+이는 Top-down방식으로 HTML구조를 만들때 이용한다.
+
+### `<header>` 태그
+
+`<header>`는 **웹 페이지의 맨 위에 있는 글로벌 헤더나,
+글이나 콘텐츠의 서두[서론/서문/도입부]를 나타낼 때 사용**한다.
+여기에는 웹 페이지의 **제목, 로고, 주요 네비게이션 메뉴** 등이 포함될 수 있다.
+
+- [네이버 메인페이지](http://m.naver.com)
+  ![](https://velog.velcdn.com/images/dyeon-dev/post/b38e63de-3fb2-43b8-948c-77d2c4efaeeb/image.png) - 네이버 HTML의 태그를 확인해보면, `<header>`안에 **검색 영역**인 `<section>`과 **메뉴 영역**인 `<nav>`가 있다.
+
+- [애플 공식홈페이지](https://www.apple.com/kr/store?afid=p240%7Cgo~cmp-200859801~adg-16348496721~ad-746150935850_aud-2374950006609%3Akwd-905396899162~dev-c~ext-~prd-~mca-~nt-search&cid=aos-kr-kwgo-Brand--)
+  ![](https://velog.velcdn.com/images/dyeon-dev/post/cab767db-eb33-4aa1-8af1-ffe413137d18/image.png) - 애플 웹 페이지에서는 **헤더 영역이`<div id="globalheader">`으로 쓰이고 있다.**
+  이 부분에 궁금증이 들어서 왜 헤더 태그가 아닌 div 태그를 쓴 건지, 시맨틱 태그가 고려된게 맞는지 gpt에게 물어봤다. 이유는 **애플의 프론트엔드 철학과 호환성 때문이라고 한다.**
+  간단하게 말하자면, 애플은 디자인 가이드라인과 일관성을 최우선시하기 때문에 많은 페이지와 컴포넌트를 공유하는데, CSS/JS에서 `#globalheader`라는 고정 ID를 사용하는 게 **유지보수 측면에서 훨씬 단순**하여 구현 방식에서 `<header>`를 쓰면 의미상 더 명확하지만, `<div>`를 택한 것이다.
+  즉, **시맨틱 태그 대신 호환성과 레거시 유지보수를 우선한 선택이라고 보면 된다.** (시맨틱 태그를 고려하지 않은 게 아님) - 헤더 영역 안에 **보조 콘텐츠 영역**인 `<aside>`와 **메뉴 영역**인 `<nav>`가 있다.
+
+#### 💡랜드마크 role="banner" 속성을 사용하자 ! (ARIA role 속성)
+
+HTML에서 "**랜드마크(landmark)**"란 웹 페이지의 구조를 설명하고 웹 접근성을 향상시키는 데 사용되는 특별한 역할을 하는 요소이다.
+
+header의 HTML 요소(Element)의 확장 개념으로 좀 더 명확한 HTML 요소의 구조와 의미를 부여하는 역할을 하는 role 속성의 값은 `banner`이다. 이는 스크린 리더를 사용하는 사용자를 위한 웹 접근성을 고려하기 위해 사용된다.
+`<header>`가 `<body>` 바로 아래에 있지 않고 `<article>`, `<section>`, `<nav>` 등 다른 페이지 영역 내부에 포함될 경우, 접근성 트리에서는 일반 section 역할로 인식될 수 있다. 이때는 명시적으로 role="banner"를 지정해주는 것이 유용하다.
+`<header>` 태그에 명시적으로 role 속성의 값이 banner로 지정되어 있지 않으면 웹 접근성을 위한 스크린 리더는 HTML 문서의 맥락상 global header인지 판단한다.
+
+global header임을 명시적으로 나타내기 위해서는 `role="banner"`를 사용하는 것이 좋다.
+
+```
+<header role="banner">
+    <h1>웹사이트 제목<h1>
+    .... 로고, 네비게이션, 검색....
+</header>
+```
+
+### `<section>` 태그
+
+`<section>` 태그는 문서, 애플리케이션의 일반적인 섹션을 나타낸다.
+더 적합한 의미를 가진 요소가 없을 때 **논리적인 측면에서 주제별 콘텐츠 그룹을 나타내는데 사용한다.**
+`<section>` 태그를 일반 컨테이너로 사용하면 안된다. 단순 스타일링이 목적이라면 `<div>` 태그를 사용해야 한다.
+
+> `<section>`과 `<article>` 태그의 차이점
+
+- `<section>` 태그는 문서나 애플리케이션의 논리적인 측면에서 주제별 콘텐츠 그룹을 나타내는데 사용된다.
+- `<article>` 태그는 문서, 페이지, 애플리케이션, 또는 사이트에서 독립적으로 배포 가능하거나 재사용할 수 있는 콘텐츠를 묶는 영역으로 사용된다. 예를 들어, 게시판 글, 뉴스 기사, 블로그 글, 댓글 등이 있다. `<article>` 태그 내에서 `<section>` 태그를 사용하는 것은 가능하다.
+
+### `<aside>` 태그
+
+`<aside>` 태그는 페이지의 **주요 콘텐츠 영역의 보조 콘텐츠 영역**을 나타낸다. 주요 콘텐츠와 상호작용하지 않고 보조적인 역할을 하는 내용이 포함될 수 있다.
+주로 문서의 주요 내용과 관련된 별도로 분리된 추가 정보를 제공하는 데 사용해야 하며, 문서의 주요 내용에 포함되는 내용을 나타내는 데는 사용해서는 안된다.
+
+사용 예제로는 **사이드바**에서 많이 사용된다.
+
+> 블로그 사이드바
+
+```html
+<article>
+  <h1>블로그 포스트 제목</h1>
+  <p>블로그 내용...</p>
+</article>
+<aside>
+  <!-- 블로그 포스트와 관련된 추가 정보 -->
+  <h2>관련 포스트</h2>
+  <ul>
+    <li><a href="#">포스트 1</a></li>
+    <li><a href="#">포스트 2</a></li>
+    <li><a href="#">포스트 3</a></li>
+  </ul>
+</aside>
+```
+
+> 광고 배너
+
+```html
+<main>
+  <h1>제품 소개</h1>
+  <p>제품에 대한 자세한 정보...</p>
+</main>
+<aside>
+  <ins>
+    <!-- 제품 관련 광고 배너 -->
+    <img src="광고이미지.jpg" alt="제품 광고" />
+  </ins>
+</aside>
+```
+
+> 인용구
+
+```html
+<article>
+  <h1>역사적 이벤트</h1>
+  <p>이벤트에 대한 설명...</p>
+</article>
+<aside>
+  <!-- 역사적 이벤트와 관련된 인용구 -->
+  <blockquote>
+    <p>역사는 어떤 상황에서든 경험된 것이 아니라, 해석된 것이다.</p>
+    <span>칼 유워스</span>
+  </blockquote>
+</aside>
+```
+
+### `<nav>` 태그
+
+`<nav>` 태그는 **다른 웹 페이지로 연결하거나, 현재 웹 페이지의 콘텐츠 내부로 연결되는 탐색(navigation)을 위한 링크(links)가 있는 영역**을 나타낸다.
+일반적인 예로는 **메뉴, 목차, 색인** 등이 있다.
+
+> 주요 네비게이션 메뉴
+
+```html
+<nav>
+  <ol>
+    <li><a href="/">홈</a></li>
+    <li><a href="/products">제품</a></li>
+    <li><a href="/products/category1">카테고리 1</a></li>
+    <!-- Breadcrumbs를 사용하여 사용자는 현재 페이지가 "홈 > 제품 > 카테고리 1 > 현재 페이지"임을 이해할 수 있고, 각 부분을 클릭하여 해당 페이지로 이동할 수 있다. -->
+    <li aria-current="page">현재 페이지</li>
+  </ol>
+</nav>
+```
+
+### `<footer>` 태그
+
+웹 페이지의 맨 하단에 있는 global footer를 나타내거나, 글이나 콘텐츠 영역에 대한 작성자, 저작권 정보, 관련 문서에 대한 링크 등의 내용을 나타낸다.
+
+#### 💡랜드마크 role="contentinfo" 속성을 사용하자 ! (ARIA role 속성)
+
+footer의 HTML 요소(Element)의 확장 개념으로 좀 더 명확한 HTML 요소의 구조와 의미를 부여하는 역할을 하는 role 속성의 값은 `contentinfo`이다. 이는 스크린 리더를 사용하는 사용자를 위한 웹 접근성을 고려하기 위해 사용된다.
+
+대부분의 웹 접근성을 위한 스크린리더에서는 `<footer>` 태그가 HTML 문서의 맥락상 global footer인지 판단한다. 그래서, `<footer>` 태그에 role="contentinfo"를 추가하지 않아도 되지만, 일부 스크린리더에서 global footer인지 판단하지 못하는 문제가 있다. 웹 접근성을 위해 이 문제를 해결하려면 `<footer>` 태그에 role="contentinfo"를 명시적으로 추가해야 한다.
+
+```
+<footer role="contentinfo">
+    <address>
+        © 2025 웹 페이지 제작자
+        <a href="mailto:contact@example.com">contact@example.com</a>
+    </address>
+</footer>
+```
+
+대표적으로 3개의 웹 페이지에서 확인한 결과, 애플 공식홈페이지에서만 footer에서 `role="contentinfo"`을 사용중이었다.
+![](https://velog.velcdn.com/images/dyeon-dev/post/ccacf855-ca6c-4e8f-a060-2cb1c8ef9316/image.png)
+
+### 👀 웹 페이지 대충 비교 분석해보기
+
+- [애플 공식홈페이지](https://www.apple.com/kr/store?afid=p240%7Cgo~cmp-200859801~adg-16348496721~ad-746150935850_aud-2374950006609%3Akwd-905396899162~dev-c~ext-~prd-~mca-~nt-search&cid=aos-kr-kwgo-Brand--)
+  - 애플 웹 페이지에서는 **`<section>` 태그를 사용한 영역은 없다.**
+  - **대신 `<div>` 태그에 고유 id로 시맨틱 태그를 적용**하였다.
+  - 총 8개의 모든 영역을 `<div id="1_section">`, `<div id="2_section">..` 식으로 나누었다.
+  - 전체적으로 `<div>` 태그를 많이 썼다. **그럼에도 불구하고 프론트엔드 설계랑 철학이 엿보이는 것 같다.**
+- [네이버 메인페이지](http://m.naver.com)
+  - 네이버 웹 페이지에서는 **`<section>` 태그를 검색 영역에서만 사용했다.**
+  - **네이버는 특징적으로 게시판 글, 뉴스 기사를 주로 다루기 때문에 `<article>` 태그가 있을 줄 알았는데 없었다.**
+    비슷한 의미로 `<section>` 영역도 콘텐츠 부분에 사용하지 않은 점이 궁금하다.
+- [NOL 야놀자 메인페이지](https://nol.yanolja.com/?trackcode=mkt_google_sa&utm_source=google_sa&utm_medium=cpc&utm_campaign=20738115572&utm_content=160897187931&utm_term=kwd-298391364620&gad_source=1&gad_campaignid=20738115572&gbraid=0AAAAAoeYBbkyrSnPc4YPlwUQT32FGCJub&gclid=Cj0KCQjwnovFBhDnARIsAO4V7mD0J-Cfn-kUAYtsvs-8sypoTDvMdZfCxQu5_HAY7pzUFNRsknsHjpAaArIqEALw_wcB&headerState=FOLD) - 야놀자 웹 페이지에서는 **총 12개 영역 중에 2개의 영역에서만 `<section>` 태그를 사용**했다. - 특가 호텔 슬라이더와 기획전 모음 영역. 두 곳에서만 사용되고,
+  **나머지 영역들에서는 `<div>` 태그로 사용**됐는데, 왜 통일성 없이 이렇게 했는지 궁금하다.
+  통일성을 못찾아서 어떤 기준으로 한 건지 분석 실패..
+
+## 3️⃣ 정리
+
+**태그를 사용할 때는 웹 페이지의 내용을 시맨틱하게 구조화하여 이해하기 쉽게 작성하는 것이 기본**이다.
+
+시맨틱 태그는 **SEO, 접근성, 협업 효율성** 측면에서 장점이 크다.
+
+다만, 실무에서는 프레임워크나 레거시 코드, 유지보수 편의성 때문에 `<div>` 같은 비시맨틱 태그를 전략적으로 활용하는 경우도 많다. 따라서 “시맨틱 태그 vs 비시맨틱 태그”의 이분법보다는 **상황에 맞는 균형 잡힌 선택**이 필요하다.
+
+또한, **웹 접근성을 높이기 위해 landmark role**(`role="banner"`, `role="contentinfo"` 등)을 명시적으로 병행하는 습관을 가지는 것이 좋다.
+
+#### 참고자료
+
+- [HTML 태그 소개](https://codingeverybody.kr/category/html/html-tag/)

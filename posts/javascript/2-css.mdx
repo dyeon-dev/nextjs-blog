@@ -1,0 +1,213 @@
+---
+title: "CSS Layout"
+publishedAt: "2025-08-19"
+summary: "display(block/inline), position(static/relative/absolute/fixed), float, flexbox로 알아보는 CSS 레이아웃 배치 방식"
+---
+
+## elements가 배치(Layout)되는 방식
+
+엘리먼트를 화면에 배치하는 것을 레이아웃 작업이라고도 하며, 렌더링 과정이라고도 한다.
+엘리먼트는 위에서 아래로 순서대로 블록을 이루며 배치되는 것이 기본이다.
+하지만 웹사이트의 배치는 다양하게 표현 가능해야 하기 때문에, 이를 다양한 방식으로 배치할 수 있도록 CSS에는 추가적인 속성을 제공한다.
+
+아래의 속성들을 중심으로 엘리먼트의 배치를 이해하는 것이 중요하다.
+
+- **display(block, inline, inline-block)**
+- **position(static, absolute, relative, fixed)**
+- **float(left, right)**
+
+## display 속성
+
+### 위에서 아래로 쌓이는 블록 요소 (display:block)
+
+display 속성이 block이거나 inline-block인 경우 그 엘리먼트는 벽돌을 쌓는 블록을 가지고 쌓인다.
+높이값을 더 주면 더 높은 크기로 엘리먼트가 쌓인다.
+**inline-block**은 블록 요소 특성 일부를 갖지만, inline처럼 흐름에 따라 좌우로 배치 가능하다. inline 엘리먼트처럼 전후 줄바꿈 없이 한 줄에 다른 엘리먼트들과 나란히 배치되지만, block 엘리먼트처럼 width와 height 속성 지정 및 margin과 padding 속성의 상하 간격 지정이 가능하다.
+
+```html
+<div>block1</div>
+<p>block2</p>
+<div>block3</div>
+```
+
+### 좌우로 흐르는 인라인 요소 (display:inline)
+
+display속성이 inline인 경우는 우측으로, 그리고 아래쪽으로 빈자리를 차지하며 흐른다.
+참고로, inline속성의 엘리먼트는 높이와 넓이를 지정해도 반영이 되지 않는다.
+
+```html
+<div>
+  <span>나는 어떻게 배치되나요?</span>
+  <span>좌우로 배치되는군요</span>
+  <a>링크는요?</a>
+  <strong>링크도 강조도 모두 좌우로 흐르는군요</strong>
+</div>
+```
+
+## position 속성
+
+### 좀 다르게 배치시키기 (position속성)
+
+엘리먼트 배치가 순서대로만 위아래로 또는 좌우로 흐르면서 쌓이기만 하면, 다양한 배치를 하기 어렵다.
+position속성을 사용면 상대적/절대적으로 어떤 위치에 엘리먼트를 배치하는 것이 수월하다.
+
+1. 기본 **static**: 그냥 순서대로 배치
+2. **absolute**: 기준점에 따라 특별한 위치에 위치
+   - **배치 흐름(normal flow)에서 제거**하고 `top/left/right/bottom` 값에 따라 특정 **기준점**(containing block) 기준으로 위치시킴
+   - 기준점을 찾는 규칙은 조상 요소 중에서 position 속성이 `static`이 아닌 요소를 기준점으로 삼음.
+   - 즉, `relative / absolute / fixed / sticky` 이 네 가지 중 하나가 설정된 **조상이 있으면, 그 요소의 padding box가 기준**이 됨.
+   - 만약 조상들 중에 전부 static만 있다면?
+     결국 **브라우저 뷰포트(`<html>` 요소)** 가 기준점이 됨.
+3. **relative**: 원래 자신이 위치해야할 곳을 기준으로 이동
+   - **배치 흐름(normal flow)에서 계속 포함**하기 때문에 원래 있어야할 자리 (normal flow 배치 자리)를 차지한 채로, 시각적으로만 이동
+   - 따라서 **아래에 오는 다른 요소가 그 빈자리를 차지하지 못함**
+   - 겹쳐 보이더라도 실제 배치 흐름은 깨지지 않음
+   - `top/left/right/bottom` 값만큼 보이는 박스만 움직임
+
+4. **fixed**: viewport(전체화면)좌측,맨위를 기준으로 동작
+
+#### relative vs absolute
+
+- relative = 자리를 유지한 채 이동 (다른 요소가 그 자리 못 씀)
+- absolute = 흐름에서 빠져나와 자유롭게 배치 (다른 요소가 그 자리 차지 가능)
+  > code > https://jsbin.com/vegixihamu/edit?html,css,output
+  > ![](https://velog.velcdn.com/images/dyeon-dev/post/e0f06f28-d3fc-4cbe-bcba-85df43c799aa/image.png)
+
+### 기본 배치에서 벗어나서 떠있기 (float:left / right)
+
+float 속성으로 원래 flow에서 벗어날 수 있고 둥둥 떠다닐 수 있다.
+일반적인 배치에 따라서 배치된 상태에서 float는 벗어난 형태로 특별히 배치된다.
+따라서 뒤에 block엘리먼트가 float된 엘리먼트를 의식하지 못하고 중첩되어서 배치된다.
+
+float의 속성은 이런 독특함 때문에 웹사이트 레이아웃 배치에서 유용하게 활용되기도 하는데, flex, grid 같은 최신 레이아웃 시스템이 등장하기 전까지는 굉장히 많이 쓰였다.
+float는 사실상 텍스트 감싸기나 간단한 좌우 배치 정도에서 유용하다.
+
+레이아웃 전체를 짜는 용도로 쓰기엔 한계가 커서 지금은 flex/grid로 대체되었다.
+
+> code > http://jsbin.com/cutivij/2/edit?html,css,output
+
+#### float를 사용한 레이아웃 예시 (한계)
+
+```
+<div class="container">
+  <div class="box">1</div>
+  <div class="box">2</div>
+  <div class="box">3</div>
+</div>
+
+```
+
+```css
+.container {
+  width: 300px;
+  border: 1px solid #333;
+  overflow: hidden; /* clearfix 용도로 사용 */
+}
+
+.box {
+  float: left;
+  width: 100px;
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+  background-color: lightblue;
+  margin-right: 10px;
+}
+```
+
+- 박스 간격 조절이 어려움 (margin으로만)
+- 수직 정렬 불가 (line-height 트릭 사용)
+- 컨테이너 높이 자동 조절이 안 됨 (clearfix 필요)
+
+#### flex로 바꾼 예시 (해결)
+
+```css
+.container {
+  display: flex;
+  justify-content: space-between; /* 수평 간격 조절 */
+  align-items: center; /* 수직 정렬 */
+  width: 300px;
+  border: 1px solid #333;
+}
+
+.box {
+  width: 100px;
+  height: 100px;
+  background-color: lightgreen;
+  text-align: center;
+  line-height: 100px; /* 수직 정렬은 align-items로도 가능 */
+}
+```
+
+- justify-content로 박스 간격 자유롭게 조절 가능
+- align-items로 수직 중앙 정렬 가능
+- 컨테이너 높이 자동 조절 (clearfix 필요 없음)
+- 순서 변경, 감싸기(wrap) 등도 간단하게 처리 가능 (flex-wrap: wrap;)
+
+### 유연한 박스 모델을 제공 (flexbox)
+
+Flexbox는 CSS의 레이아웃 모듈 중 하나로, 유연한 박스 모델을 제공하여 엘리먼트를 쉽게 배치할 수 있도록 도와준다.
+Flexbox는 주로 수평 정렬, 수직 정렬, 아이템 간 간격 설정 등을 다루는 데 사용된다.
+
+1. **주 축 (Main Axis)과 교차 축 (Cross Axis)**
+
+- Flex 컨테이너는 주 축과 교차 축을 가지며, 이 축들을 기준으로 아이템들이 배치
+- 기본적으로 주 축은 수평 방향이고, 교차 축은 수직 방향
+- 주 축과 교차 축은 Flex 컨테이너의 속성에 따라 결정
+
+2. **Flex Container (부모 요소)**
+
+- Flexbox를 적용하는 컨테이너
+- display: flex 또는 display: inline-flex를 사용하여 컨테이너를 정의
+
+| **Flex 컨테이너 속성** | **설명**                                                            |
+| ---------------------- | ------------------------------------------------------------------- |
+| **`flex-direction`**   | **아이템들이 배치되는 주 축의 방향을 설정**                         |
+| **`justify-content`**  | **주 축에서 아이템들을 정렬하는 방법을 설정.**                      |
+| **`align-items`**      | **교차 축에서 아이템들을 정렬하는 방법을 설정.**                    |
+| **`flex-wrap`**        | **아이템들이 한 줄에 모두 배치되지 않을 경우 줄 바꿈 여부를 설정.** |
+| **`align-content`**    | **교차 축에서 여러 줄이 있을 때 줄 전체 묶음을 정렬**               |
+
+3. **Flex Items (자식 요소)**
+
+- Flex 컨테이너 내부에 있는 엘리먼트들을 Flex 아이템이라고 함
+
+| **Flex 아이템 속성** | **설명**                                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| **`flex-basis`**     | **아이템의 기본 크기를 설정**                                                                   |
+| **`flex-grow`**      | **아이템의 남는 공간 활용에 대한 증가 비율을 설정.**                                            |
+| **`flex-shrink`**    | **아이템의 감소 비율을 설정.**                                                                  |
+| **`align-self`**     | **개별 아이템의 교차 축 정렬 방법을 설정. (Flex 컨테이너의 `align-items`를 재정의할 수 있음.)** |
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/656ca250-4e21-4de8-98d5-53c6556b748a/image.png)
+
+### 정리
+
+레이아웃의 방법은 여러가지가 있다. 어떤 방법을 선택할지 고민하는 습관을 들이자.
+
+| display 속성 | 특징                                                      |
+| ------------ | --------------------------------------------------------- |
+| block        | 전체 너비 차지, 위에서 아래로 쌓임, 높이/너비 적용 가능   |
+| inline       | 좌우로 흐름, 높이/너비 적용 불가                          |
+| inline-block | inline처럼 좌우로 흐르면서, block처럼 높이/너비 적용 가능 |
+
+| position 속성 | 특징                                                                  |
+| ------------- | --------------------------------------------------------------------- |
+| static        | 기본, normal flow                                                     |
+| relative      | 원래 자리 기준으로 이동, flow 유지                                    |
+| absolute      | flow에서 제거, 조상 요소 중 `position`이 static이 아닌 요소 기준 배치 |
+| fixed         | viewport 기준으로 고정 배치                                           |
+| sticky        | 스크롤 위치에 따라 relative → fixed 전환                              |
+
+float는 과거 레이아웃(2~3단 컬럼)에서 사용했으나, flex/grid 등장으로 레이아웃 용도는 감소했다.
+
+최신 웹에서는 flex / grid 활용하여 유지보수가 용이하고 직관적이게 구현하자.
+
+- 특별한 위치에 배치 → position: absolute / relative 활용
+- 단순 좌우 배치 → inline-block이나 float 가능
+- 텍스트/요소 간 간격 → margin과 padding 활용
+- 브라우저 호환성 확인 필수
+
+#### 참고자료
+
+- [CSS Flexbox Layout Guide](https://css-tricks.com/snippets/css/a-guide-to-flexbox/)
