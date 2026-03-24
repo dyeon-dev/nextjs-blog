@@ -1,0 +1,214 @@
+---
+title: "Node.js의 net 모듈로 웹 서버 만들기"
+publishedAt: "2025-09-19"
+summary: "Node.js에서 기본으로 제공해 주는 TCP 통신을 위한 net 모듈을 사용해서 HTTP GET에 응답하는 웹 서버를 구현해보자"
+---
+
+## 배경
+
+직접 low 레벨로 웹 서버를 구현하기 위해서 **net 모듈로 HTTP GET에 응답하는 웹 서버 구현**하고자 한다.
+
+하지만 해당 과정에서 고민이 생겼다.
+
+net 모듈은 단순히 데이터 정보가 Buffer 형식으로 들어온다.
+이걸 사용해서 어떻게 HTTP 요청을 처리할 수 있을지 고민이 되었다.
+
+이를 해결하기 위해 직접 HTTP를 처리하는 과정에서, HTTP 요청과 응답 형식을 알아보고 HTTP/1.1 헤더를 수동으로 작성해보는 경험이 중요하다고 생각했다.
+
+따라서 어떤식으로 header와 body가 이루어지는지 알아보고, 어떻게 적용했는지 정리해보았다.
+
+### 1. Node.js는 서버가 아니다. 그럼 어떻게 서버를 만들 수 있는걸까?
+
+Node.js 자체는 웹 서버가 아니다.
+Node.js는 구글의 V8 엔진으로 자바스크립트 런타임 환경을 제공하는 프로그램일 뿐이다.
+웹 브라우저말고도 자바스크립트를 실행할 수 있도록 해준다.
+
+서버는 특정 포트를 열고 클라이언트의 요청을 기다리는 역할을 한다. Node.js는 이러한 서버 기능을 구현할 수 있는 API를 제공하기 때문에, 직접 코드를 작성해서 서버를 만들 수 있다.
+
+node.js의 웹 서버 프로그래밍에는 2가지 방식이 있다.
+
+- node.js에서 기본으로 제공해 주는 모듈을 이용
+  - net 모듈 사용
+  - http 모듈 사용
+- Express 등의 웹 프레임워크 사용
+
+**웹 서버 방식의 이해도를 높이기 위해 net 모듈을 사용해서 웹 서버를 만들어보자.**
+
+### 2. net 모듈 - 웹 서버 만드는 도구
+
+Node.js의 net 모듈은 **TCP 통신**을 위한 기본적인 도구이다.
+이 모듈을 사용하여 소켓 통신을 구현하고, 서버와 클라이언트 간의 **데이터 스트림**을 다룰 수 있다.
+
+net 모듈로 특정 포트에서 연결을 기다리고, 연결이 들어오면 데이터를 주고받는 Socket 객체를 생성한다.
+이 Socket 객체를 통해 들어오는 요청을 처리한다.
+
+### 3. 서버 객체 생성하기
+
+net 모듈을 불러오고 **createServer()** 메서드를 통해 **TCP 서버 객체를 생성**한다.
+
+서버 객체를 생성한 후 특정 포트번호로 **listen()** 메서드를 호출하면 해당 **포트로 웹 서버 통신이 시작**된다.
+
+```js
+import * as net from "node:net";
+const PORT = process.env.PORT || 3000;
+
+const server = net.createServer((socket)=> {
+	// 클라이언트로부터 데이터를 수신할 때
+	socket.on("data", (data) => {
+		console.log(data.toString());
+		// 클라이언트에게 데이터 반환
+		socket.write(`서버가 보낸 응답: ${data}`);
+	}
+})
+
+server.listen(PORT, () => {
+	console.log(`TCP server (net) listening at http://localhost:${PORT}/index.html`);
+});
+```
+
+<br />
+
+- 브라우저에 http://localhost:3000/ 을 입력했을 때 **socket.on()** 메서드를 통해 **클라이언트로부터 온 데이터를 수신**한다.
+- data 정보는 **Buffer 형식**으로 들어오고, 이를 문자열로 바꿔서 확인해보면 다음과 같은 정보가 담겨있다.
+
+```
+GET / HTTP/1.1
+Host: localhost:3000
+Connection: keep-alive
+Cache-Control: max-age=0
+sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "macOS"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,_/_;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: x_auth=eyJhbGciOiJIUzI1NiJ9.NjZjOTZkOTQ3NDllOGQ4ZTUyZWM3ZDQ3.PCwoG67FlL4g66sRfkvwJVgjS-NLIY9q-yzb9qq5tgY
+```
+
+> Buffer란?
+
+- 바이너리 데이터를 다루는 객체이다.
+- Node.js는 데이터를 주고받을 때 Buffer 객체 형태로 처리한다.
+- Buffer는 메모리에 직접 할당된 고정 크기 버퍼로, I/O 작업(파일 읽기, 네트워크 통신 등)의 효율을 높여준다.
+- toString() 메서드를 사용하여 Buffer의 내용을 문자열로 변환할 수 있다.
+
+### 4. HTTP 응답 형식 직접 작성해보기
+
+브라우저에 http://localhost:3000/ 을 입력했을 때, 위의 코드에서 **socket.write()가 작동하지 않고, 값이 없거나 오류가 출력**된다.
+
+그 이유는 다음과 같다.
+net 서버는 단순히 **TCP Socket을 통한 원시 데이터(Raw Data)** 만 주고받을 수 있다.
+**브라우저는 HTTP 프로토콜만 사용** 하기 때문에 net 서버가 브라우저의 HTTP 요청을 처리할 수 없는 것이다.
+이를 해결하기 위해 **브라우저 규약에 맞게 HTTP 응답 형식**을 직접 작성해서 클라이언트가 정상 파싱하도록 해야 한다.
+
+- 공식문서: [Node.js HTTP](https://nodejs.org/api/http.html#responsewritechunk-encoding-callback의) response.writeHead(), response.write() 섹션 참고.
+
+그럼 **HTTP 응답 형식**부터 자세히 알아보자! (이게 핵심)
+
+**HTTP(Hypertext Transfer Protocol)** 는 텍스트 기반 프로토콜로, 규칙에 맞춰 개발해서 서로 정보를 교환할 수 있도록 한다.
+클라이언트와 서버는 **상태 줄, header, 빈 줄(CRLFCRLF), body** 구조 순서로 통신한다.
+
+#### header의 역할(메타데이터)
+
+- **Content-Type**: body를 어떤 형식으로 해석할지 지정
+- **Content-Length** / Transfer-Encoding: 응답 body 길이나 전송 방식(예: chunked)을 알려, 클라이언트가 어디까지를 body로 읽을지 판단하게 함. 둘 중 하나는 필수. 없으면 클라이언트는 응답 경계를 알 수 없음
+- **Connection**: keep-alive/close 여부를 지정
+- 그 외 캐시, 쿠키, CORS 등 클라이언트 동작을 결정하는 다양한 정책 전달
+
+#### body의 역할(실제 데이터)
+
+- HTML, JSON, 이미지 등 클라이언트가 최종적으로 사용하는 페이로드
+- 일부 상태코드(예: 204, 304)나 요청 메서드(HEAD)에서는 응답에 body가 포함되지 않는다.
+
+| **구분**            | **204 No Content**                                                                           | **304 Not Modified**                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **목적**            | **요청에 대한 응답으로 보낼 새로운 콘텐츠가 없을 때 사용한다.**                              | **클라이언트의 캐시된 리소스가 최신 상태임을 알린다.**                                |
+| **사용 시점**       | **`PUT`, `DELETE`, `POST` 등 서버의 리소스를 변경하는 요청이 성공했을 때 주로 사용한다.**    | **캐시된 리소스를 확인하기 위한 조건부 `GET`, `HEAD` 요청에 대한 응답으로 사용한다.** |
+| **캐시**            | **기본적으로 캐시될 수 있다. `ETag` 헤더가 포함될 수 있다.**                                 | **캐시를 활용하기 위한 상태 코드다.**                                                 |
+| **클라이언트 동작** | **클라이언트는 현재 페이지를 유지하거나, 서버의 성공 응답을 바탕으로 다음 작업을 진행한다.** | **클라이언트는 가지고 있는 캐시된 복사본을 그대로 사용한다.**                         |
+
+#### 빈 줄(CRLFCRLF)
+
+- 헤더들은 `\r\n`으로 줄바꿈하며, 헤더 종료 후 반드시 빈 줄 `\r\n`을 넣는다.
+- 그 다음이 body. 이 경계가 없으면 클라이언트는 파싱할 수 없다.
+
+그럼 HTTP 응답 형식을 직접 작성해보자.
+
+```js
+const server = net.createServer((socket) => {
+  socket.on("data", (data) => {
+    try {
+      const body = `<h1>HTTP 응답 바디</h1>`;
+      const header =
+        `HTTP/1.1 200 OK\r\n` +
+        `Content-Type: text/html; charset=UTF-8\r\n` +
+        `Content-Length: ${Buffer.byteLength(body)}\r\n` +
+        `\r\n`;
+      const response = header + body;
+      socket.write(response);
+      socket.end();
+    } catch (error) {
+      console.error();
+    }
+  });
+
+  socket.on("error", (err) => {
+    console.error("Socket error:", err.message);
+    try {
+      socket.destroy();
+    } catch {}
+  });
+});
+```
+
+브라우저에 접속하면 **body로 선언한 부분이 표시**된다.
+**Response Header**에도 적용한 부분이 적용되어 있다.
+![](https://velog.velcdn.com/images/dyeon-dev/post/af087107-9924-4701-97b4-cba0d81de35b/image.png)
+
+### 5. HTTP 요청 구조에서 method, url 추출
+
+HTTP 요청은 GET / HTTP/1.1과 같이 시작하는 **Request Line**과 헤더로 구성된다.
+이 Request Line에서 URI를 추출하고 **각 URI에 맞는 HTML 페이지를 응답하도록 분기처리**를 해준다.
+
+```js
+// ["GET", "/", "HTTP/1.1"]
+const [method, url] = data.toString().split(" ");
+
+const serverSideRendering = (url) => {
+  switch (url) {
+    case "/":
+      return fs.readFileSync("./views/index.html");
+    case "/login":
+      return fs.readFileSync("./views/login.html");
+    case "/register":
+      return fs.readFileSync("./views/register.html");
+    default:
+      return `<h1>not found page</h1>`;
+  }
+};
+```
+
+위 부분을 **body** 부분에 넣어주면 서버사이드렌더링이 적용된다!
+
+```js
+const body = serverSideRendering(url);
+```
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/9d4fb236-3539-4455-88b6-5c7e132304c7/image.png)
+![](https://velog.velcdn.com/images/dyeon-dev/post/e969cda5-7fbc-4295-8e59-ead0e07ddbcc/image.png)
+
+### 6. 결론 및 향후 목표
+
+이렇게 **net 모듈**을 사용해서 **Node.js 서버의 기초**를 직접 만들어보았다.
+**HTTP 요청과 응답 형식**을 알아보고 **HTTP/1.1 헤더**를 수동으로 작성해보며 서버와 클라이언트 통신을 성공적으로 처리했다.
+Node.js 서버의 기초이기 때문에 Express를 활용하기 위한 기본기를 다지는 경험이었다.
+또한, 서버가 정적 HTML로 응답해주는 방식으로 **MPA 구조와 SSR 방식**의 기초를 다졌다.
+
+하지만 지금까지 구현한 소스 코드는 stylesheet 와 파비콘 등을 지원하지 못하고 있다.
+향후 더 **다양한 컨텐츠 타입을 지원하도록 개선**해 볼 것이다. MIME 타입을 적용하고 서버 코드를 확장하는 방식으로 진행할 것이다.
