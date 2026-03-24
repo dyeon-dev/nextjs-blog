@@ -6,7 +6,9 @@ export function BlogPosts() {
 
   return (
     <div className="mt-16">
-      <h1 className="font-semibold text-2xl mb-8 tracking-tighter">All Post</h1>
+      <h1 className="font-semibold text-2xl mb-8 tracking-tighter">
+        All Post ({allBlogs.length})
+      </h1>
       {allBlogs
         .sort((a, b) => {
           if (

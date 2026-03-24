@@ -7,22 +7,22 @@ export function SeriesPosts() {
   return (
     <div className="mt-16">
       <h1 className="font-semibold text-2xl mb-8 tracking-tighter">
-        Series Post
+        Series Post ({seriesBlogs.length})
       </h1>
-      <div className="flex items-center space-x-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {seriesBlogs.map((series) => (
           <Link
             key={series.slug}
-            className="flex flex-col space-y-1 mb-4"
+            className="flex flex-col space-y-1"
             href={`/blog/${series.slug}`}
           >
-            <div className="relative h-90 w-50 select-none rounded-l px-8 pt-8 pb-12 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl">
+            <div className="relative h-full w-full select-none rounded-xl p-6 shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center text-center">
               <img
                 src={series.metadata.image}
                 alt={series.title}
-                style={{ borderRadius: "10px" }}
+                className="w-full h-auto object-cover rounded-lg mb-4"
               />
-              <h2 className="font-semibold text-xl">{series.title}</h2>
+              <h2 className="font-semibold text-lg">{series.title}</h2>
             </div>
           </Link>
         ))}
