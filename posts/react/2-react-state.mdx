@@ -1,0 +1,385 @@
+---
+title: "React의 상태 관리 - useReducer, ContextAPI"
+publishedAt: "2025-10-22"
+summary: "리액트의 상태(State)로 정의하기 전 고려해야 할 점과 올바른 기준을 통해 상태 관리 방식을 적용하자"
+---
+
+리액트에서의 상태는 시간이 지나면서 변할 수 있는 동적 데이터이며, 값이 변경될 때마다 컴포넌트의 렌더링 결과물에 영향을 준다.
+
+리액트 앱 내의 상태는 지역 상태 / 전역 상태 / 서버 상태로 구분할 수 있다.
+
+리액트 내부 API만을 사용해서 상태를 관리할 수 있지만 성능 문제와 상태의 복잡성으로 인해 Redux, Recoil, Zustand와 같은 상태 라이브러리를 활용하기도 한다.
+
+# ✅ 상태(state)의 세 가지 구분
+
+| 구분                         | 저장 위치                                                | 예시                                   | 특징                                                |
+| ---------------------------- | -------------------------------------------------------- | -------------------------------------- | --------------------------------------------------- |
+| **지역 상태 (Local State)**  | 특정 컴포넌트 내부 (`useState`, `useReducer`)            | 입력값, 모달 열림 여부 등              | 해당 컴포넌트 안에서만 접근 가능                    |
+| **전역 상태 (Global State)** | 여러 컴포넌트에서 공유 (`Context`, `Redux`, `Recoil` 등) | 로그인 정보, 테마 모드 등              | 앱 전역에서 접근 가능                               |
+| **서버 상태 (Server State)** | 외부 서버(백엔드 API 등)에 저장                          | 게시글 목록, 유저 정보, 상품 데이터 등 | React 외부의 데이터 — 네트워크 요청으로 가져와야 함 |
+
+## 지역 상태 (Local State)
+
+지역 상태는 **컴포넌트 내부에서 사용되는 상태**로, 예를 들어 체크박스의 폼의 입력값 등이 해당한다.
+
+주로 **useState 훅**을 가장 많이 사용하며 때에 따라 **useReducer**와 같은 훅을 사용하기도 한다.
+
+## 전역 상태 (Global State)
+
+전역 상태는 **앱 전체에서 공유되는 상태**를 의미한다.
+
+여러 개의 컴포넌트가 전역 상태를 사용할 수 있으며 **상태가 변경되면 컴포넌트들도 업데이트** 된다.
+
+**Prop drilling 문제를 피하고자** 지역 상태를 해당 컴포넌트들 사이의 전역 상태로 공유할 수도 있다.
+
+## 서버 상태 (Server State)
+
+서버 상태는 사용자 정보, 글 목록 등 **외부 서버에서 저장해야 하는 상태**를 의미한다.
+**UI 상태와 결합**하여 관리하게 되며 **로딩 여부**나 **에러 상태** 등을 포함한다.
+
+서버 상태도 결국 서버에서 가져온 데이터지만 React 내부에선 그냥 useState나 useReducer 같은 훅으로 관리되는 **지역 상태**이다.
+
+#### 그런데 서버 상태는 일반 상태랑 다르다
+
+비슷하게 관리할 수는 있지만, 서버 상태만의 특성이 있다.
+
+| 항목          | 지역/전역 상태             | 서버 상태                    |
+| ------------- | -------------------------- | ---------------------------- |
+| 데이터 출처   | 클라이언트 내부에서 생성   | 서버(API)에서 가져옴         |
+| 최신성        | 항상 최신 (즉시 수정 가능) | 시간이 지나면 오래됨         |
+| 갱신 방식     | `setState()`로 직접 수정   | 다시 `fetch`해야 함          |
+| 비동기성      | 거의 없음                  | 항상 비동기 (로딩/에러 필요) |
+| 동기화 필요성 | 없음                       | 서버 데이터와 동기화 필요    |
+
+단순히 useState로 서버 데이터를 관리하면 로딩 상태 / 에러 처리 / 캐싱 / 리페치(refetch) / 동시성 관리 등을 직접 다 구현해야 해서 복잡해진다.
+
+그래서 등장한게 **react-query, SWR와 같은 서버 상태 관리 라이브러리**이다. **서버와의 동기화, 캐싱, 비동기 처리** 등 때문에 최근에는 전용 라이브러리로 관리하는 추세다.
+
+# ✅ 상태로 정의하기 전에 고려해야 할 점
+
+상태가 업데이트 될 때마다 리렌더링이 발생하기 때문에 유지보수 및 성능 관점에서 상태의 개수를 최소화하는 것이 바람직하다.
+가능하다면 상태가 없는 Stateless 컴포넌트를 활용하는게 좋다.
+
+어떤 값을 상태로 정의할 때는 다음 2가지 사항을 고려해야 한다.
+
+## 1. 시간이 지나도 변하지 않는다면 상태가 아니다.
+
+상태는 **시간에 따라 변할 수 있는 값**을 관리하기 위한 것이다.
+따라서 컴포넌트의 라이프사이클 동안 **변하지 않는 값**이라면 굳이 상태로 둘 필요가 없다.
+
+### 하지만 동일한 참조를 유지해야 한다면
+
+상태로 둘 필요는 없지만, 그 값을 렌더링 과정에서는 **"하나의 동일한 객체로 유지"** 해야 할 필요는 있다.
+
+- 렌더링될 때마다 새로 만들어지면 안되는 값이라면 **그 참조를 일정하게 유지하는 방법**이 필요한 것이다.
+- **객체 참조 동일성**을 유지하는 방법을 고려해야 한다.
+
+예를 들어, "시간이 지나도 변하지 않는 값"으로 컴포넌트가 마운트될 때만 스토어 객체 인스턴스를 생성하고, 언마운트될 때까지 해당 참조가 변하지 않는다고 가정해보자.
+
+```ts
+const store = new Store(); // 매번 새로운 인스턴스 생성
+```
+
+이처럼 단순히 상수 변수에 저장하는 방법이 있을 것이다.
+하지만 이런 방식은 다음과 같은 문제점이 있다.
+
+- 함수형 컴포넌트는 렌더링될 때마다 함수가 다시 실행되므로 상수에 객체를 저장하면 매번 새로운 객체가 생성된다.
+- 이 객체가 Context나 props 등으로 전달되면, 매번 참조가 달라져서 **불필요한 리렌더링이 자주 발생**할 수 있다.
+
+이 문제를 해결하려면, **컴포넌트가 마운트될 때 한 번만 객체를 생성하고 이후 렌더링에서도 같은 참조를 유지**하도록 만들어야 한다.
+
+### 동일한 객체 참조를 유지하는 3가지 방법
+
+객체 참조 동일성을 유지하기 위해 사용되는 방법 중 하나는 메모이제이션이다.
+
+**1. useMemo 사용 (권장되지 않음)**
+
+```ts
+const store = useMemo(() => new Store(), []);
+```
+
+- 렌더링 간 동일한 객체를 유지할 수 있다.
+- 하지만 useMemo는 **성능 최적화를 위한 메모이제이션용 훅**이며, 객체 참조 유지를 위한 용도로 사용하는 것은 권장되지 않는다.
+
+**2. useState의 지연 초기화(Lazy Initialization) 사용**
+
+```ts
+const [store] = useState(() => new Store());
+```
+
+- useState의 초기값 함수를 사용하면, 마운트 시점에 한 번만 실행된다.
+- 이후 렌더링에서도 동일한 인스턴스가 유지된다.
+- 기술적으로는 잘 동작하며, 실제로 동일한 객체 참조를 보장할 수 있다.
+
+> 하지만 의미론적으로는 좋은 방법이 아니다.
+
+- useState는 본래 “시간이 지나면서 변하고, 렌더링 결과에 영향을 주는 값”을 관리하기 위해 설계된 훅이다.
+- 그러나 위와 같은 경우의 목적은 “상태 변화”가 아닌 “객체 참조의 동일성 유지” 이므로,
+  의미상으로는 useRef를 사용하는 것이 더 적합하다.
+
+**3. useRef 사용 (가장 권장되는 방식)**
+
+```ts
+const store = useRef<Store>(null);
+
+if (!store.current) {
+  store.current = new Store();
+}
+```
+
+- useRef는 렌더링이 다시 일어나도 같은 객체를 계속 유지한다.
+- useRef.current는 React가 재렌더링 시에도 초기화하지 않기 때문에 **“마운트 시 한 번 생성 → 언마운트 전까지 동일 참조 유지”** 에 가장 적합하다.
+- React 공식문서에서도 이 목적에는 useRef를 사용하는 것을 권장한다.
+
+## 2. 파생된 값은 상태가 아니다.
+
+### SSOT 원칙
+
+> SSOT (Single Source of Truth)
+> : 하나의 데이터는 단 하나의 출처(source) 에서만 생성·수정되어야 한다.
+
+React에서도 이 원칙은 그대로 적용된다.
+다른 값에서 파생될 수 있는 데이터는 상태로 두지 말고, 단일 출처(SSOT) 원칙을 지켜야 한다.
+
+**부모로부터 전달받은 props**나 **기존 상태에서 계산 가능한 값은 새로운 상태로 관리하면 안 된다.**
+
+#### 문제예시1. props를 상태로 복사한 경우
+
+```ts
+import { useState } from "react";
+
+type UserEmailProps = {
+  initialEmail: string;
+};
+
+function UserEmail({ initialEmail }: UserEmailProps) {
+  // ❌ props 값을 별도 상태로 복사
+  const [email, setEmail] = useState(initialEmail);
+
+  const onChangeEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  };
+
+  return (
+    <div>
+      <input type="text" value={email} onChange={onChangeEmail} />
+    </div>
+  );
+}
+```
+
+- initialEmail이 바뀌어도 email 상태는 자동으로 갱신되지 않는다.
+- useEffect로 동기화를 시도하면, 사용자의 입력과 부모 데이터가 충돌할 수 있다.
+  (사용자가 수정한 값이 부모의 변경으로 덮어써질 위험)
+- 즉, 두 개의 출처(initialEmail, email) 가 생겨서 SSOT가 깨진다.
+
+#### 해결 방법: 상태 끌어올리기
+
+- 상태를 하위 컴포넌트에 두지 말고, **상위 컴포넌트로 끌어올려(Lifting State Up) 단일 출처(props)로 관리**한다.
+- 자식은 부모의 setEmail을 호출해 부모 상태를 갱신한다.
+
+```ts
+import { useState } from "react";
+
+type UserEmailProps = {
+  email: string;
+  setEmail: React.Dispatch<React.SetStateAction<string>>;
+};
+
+// 상태를 부모로부터 props로 받기만 함 (출처는 부모 하나)
+function UserEmail({ email, setEmail }: UserEmailProps) {
+  const onChangeEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  };
+
+  return (
+    <div>
+      <input type="text" value={email} onChange={onChangeEmail} />
+    </div>
+  );
+}
+
+// 부모 컴포넌트: 상태의 "단일 출처"
+function ParentComponent() {
+  const [email, setEmail] = useState("example@email.com");
+
+  return (
+    <div>
+      <h2>사용자 이메일 수정</h2>
+      <UserEmail email={email} setEmail={setEmail} />
+      <p>현재 이메일: {email}</p>
+    </div>
+  );
+}
+
+export default ParentComponent;
+
+```
+
+#### 문제예시2. 내부 상태끼리 동기화한 경우
+
+```ts
+const [items, setItems] = useState<Item[]>([]);
+const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+
+useEffect(() => {
+  setSelectedItems(items.filter((item) => item.isSelected));
+}, [items]);
+```
+
+- `items`와 `selectedItems`가 **서로 다른 출처**로 존재해 동기화 누락·불일치·추적 어려움이 발생할 수 있다.
+- 단순히 계산 가능한 값인데, 별도의 상태로 관리하면서 불필요한 렌더링이 추가된다.
+
+#### 해결 방법: 계산된 값으로 처리
+
+- `selectedItems`를 상태로 두지 말고, **계산된 값으로 처리**한다.
+- 변수에 계산 결과를 담으면 리렌더링 횟수를 줄일 수 있다.
+
+```ts
+const selectedItems = items.filter((item) => item.isSelected);
+```
+
+<br />
+
+- 계산 비용이 크다면 성능 문제가 발생할 수도 있기 때문에 useMemo로 최적화한다.
+- items가 변경될 때만 계산을 수행하고 결과를 메모이제이션하여 성능을 개선할 수 있다.
+
+```ts
+const selectedItems = useMemo(() => veryExpensiveCalculation(items), [items]);
+```
+
+# 🌟 useState vs useReducer, 어떤 것을 사용해야 할까
+
+상태로 정의하기 전에 고려할 점을 다 파악하고 상태 관리를 해야겠다고 정했다면, useReducer를 사용하는 경우는 언제가 있을까?
+
+useState는 단순한 상태 관리에는 충분하지만, 상태구조가 복잡해지거나 여러 필드가 서로 연관될 땐 관리가 어려워진다.
+이럴 땐 useReducer를 사용하는 것이 더 안전하고 명확하다.
+
+useReducer 사용을 권장하는 경우는 크게 2가지가 있다.
+
+1. 하위 필드가 많은 복잡한 상태 로직을 다룰 때
+   → 여러 속성을 가진 객체 상태를 관리할 때
+
+2. 다음 상태가 이전 상태에 의존할 때
+   → “size가 바뀌면 page를 0으로 초기화해야 한다”처럼 상태 간 규칙(비즈니스 로직)이 존재할 때
+
+### 복잡한 검색 쿼리 상태 관리 상황
+
+#### 리뷰를 필터링하는 검색 기능을 만든다고 가정해보자.
+
+정보를 필터링해서 보여주기 위한 쿼리를 상태로 저장해야 할 것이다.
+이러한 쿼리는 단순하지 않고 검색 날짜, 리뷰 점수, 키워드 등 많은 하위 필드를 가지게 된다.
+페이지네이션까지 고려한다면 페이지, 사이즈 등의 필드도 추가될 수 있다.
+
+```ts
+type ReviewRatingString = "1" | "2" | "3" | "4" | "5";
+
+interface SearchParams {
+  startDate: Date;
+  endDate: Date;
+  rating: ReviewRatingString[];
+  keywords: string[];
+
+  // 이외 기타 필터링 검색 옵션
+}
+
+interface SearchState {
+  filter: SearchParams;
+  page: string;
+  size: number;
+}
+```
+
+#### 문제: useState 관리의 한계
+
+이러한 데이터 구조를 useState로 다루면 상태를 업데이트할 때마다 잠재적인 오류 가능성이 증가한다.
+예를 들어 page 값만 업데이트하고 싶어도 우선 전체 데이터를 가지고 온 다음 page 값을 덮어쓰게 되므로 size나 filter 같은 다른 필드가 수정될 수 있어 의도치 않은 오류가 발생할 수 있다.
+
+또한, 'size 필드를 업데이트할 때는 page 필드를 0으로 설정해야 한다.' 등의 특정한 업데이트 규칙이 있다면 useState만으로는 한계가 있다. 이럴때는 useReducer를 사용하는게 좋다.
+
+useReducer는 '무엇을 변경할지'와 '어떻게 변경할지'를 분리하여 dispatch를 통해 어떤 작업을 할지를 액션으로 넘기고 reducer 함수 내에서 상태를 업데이트하는 방식을 정의한다.
+이로써 복잡한 상태 로직을 숨기고 안정성을 높일 수 있다.
+
+#### 해결: useReducer로 상태 변경 로직을 명확히 분리
+
+**1. Action(무엇을 할지) 정의**
+
+```ts
+type Action =
+  | { type: "filter"; payload: SearchParams }
+  | { type: "navigate"; payload: string }
+  | { type: "resize"; payload: number };
+```
+
+- 'filter' → 새로운 검색 조건으로 필터링
+- 'navigate' → 페이지 이동
+- 'resize' → 페이지 크기 변경
+
+**2. Reducer(어떻게 할지) 정의**
+
+```ts
+const reducer: React.Reducer<SearchState, Action> = (state, action) => {
+  switch (action.type) {
+    case "filter":
+      // 필터가 바뀌면 페이지를 0으로 초기화
+      return { ...state, filter: action.payload, page: 0 };
+
+    case "navigate":
+      // 페이지 이동
+      return { ...state, page: action.payload };
+
+    case "resize":
+      // 페이지 크기 변경 시, page도 0으로 초기화
+      return { ...state, page: 0, size: action.payload };
+
+    default:
+      return state;
+  }
+};
+```
+
+**3. useReducer 사용**
+
+```ts
+const [state, dispatch] = useReducer(reducer, getDefaultState());
+```
+
+- state → 현재 상태 (SearchState)
+- dispatch(action) → 상태 변경을 요청하는 함수
+
+**4. dispatch로 상태 변경하기**
+
+```ts
+// dispatch 예시
+dispatch({ payload: filter, type: "filter" });
+dispatch({ payload: 3, type: "navigate" });
+dispatch({ payload: 20, type: "resize" });
+```
+
+이처럼 무엇을 변경할지(action)만 전달하면, 어떻게 변경할지는 reducer내부에서 일관적으로 처리된다.
+즉, 상태 변경 로직이 한 곳으로 모여 있어 안전하고 추적이 쉽다.
+
+| 구분         | useState                  | useReducer                 |
+| ------------ | ------------------------- | -------------------------- |
+| 상태 구조    | 단순 (원시값)             | 복잡한 객체 구조           |
+| 상태 간 규칙 | 관리 어려움               | reducer에서 일관 처리 가능 |
+| 코드 중복    | 많음 (매번 스프레드 연산) | 최소화 (action 기반)       |
+| 유지보수성   | 낮음                      | 높음 (로직 집중)           |
+
+# 🌟 전역 상태 관리
+
+어떤 상태를 컴포넌트 내부에서만 사용하는게 아니라 다른 컴포넌트와 공유할 수 있는 전역 상태로 사용하는 방법은 크게 **리액트 Context API를 사용하는 방법**과 **외부 상태 관리 라이브러리를 사용하는 방법**이 있다.
+
+### Context API + useState / useReducer
+
+Context API는 **다른 컴포넌트들과 데이터를 쉽게 공유**하기 위한 목적으로 제공되는 API이다.
+
+- 깊은 레벨의 컴포넌트 사이에 데이터를 전달하는 **Prop Drilling** 같은 문제를 해결하기 위한 도구로 활용된다.
+- Context API는 엄밀히 말하면 전역 상태 관리를 위한 솔루션보단, 여러 컴포넌트 간에 값을 공유하는 솔루션에 가깝다.
+- useState나 useReducer 같이 지역 상태를 관리하기 위한 API와 결합하여 상태를 공유하기 위한 방법으로 사용되기도 한다.
+
+> Context API 활용팁: 유틸리티 함수를 정의하여 더 간단한 코드로 컨텍스트와 훅을 생성
+
+- **자주 사용되는 Provider와 해당 컨텍스트를 사용하는 훅을 간편하게 생성하여 생산성**을 높일 수 있다.
+- 대규모 애플리케이션이나 성능이 중요한 애플리케이션에서 권장되지 않는 방법이다. 왜냐하면 **Context Provider의 props로 주입된 값이나 참조가 변경될 때마다 해당 컨텍스트를 구독하고 있는 모든 컴포넌트가 리렌더링**되기 때문이다.
+- 물론 Context를 생성할 때 관심사를 잘 분리해서 구성하면 리렌더링 발생을 최소화할 수는 있겠지만, **애플리케이션이 커지고 전역 상태가 많아질수록 불필요한 리렌더링과 상태의 복잡도가 증가**한다.

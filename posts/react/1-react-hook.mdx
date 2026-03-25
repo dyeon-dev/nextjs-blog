@@ -1,0 +1,233 @@
+---
+title: "useState, useEffect, useRef 훅 잘쓰는법"
+publishedAt: "2025-10-21"
+summary: "리액트 함수 컴포넌트의 핵심인 훅의 동작 원리를 알아보고 언제 어떻게 쓰면 될지 기억해두자"
+---
+
+리액트에 훅이 추가(리액트 16.8 버전)되기 이전에는 클래스 컴포넌트에서만 상태를 가질 수 있었다. componentDidMount, componentDidUpdate와 같이 하나의 생명주기 함수에서만 상태 업데이트에 따른 로직을 실행시킬 수 있었다.
+
+리액트 훅이 추가되면서 함수 컴포넌트에서도 클래스 컴포넌트와 같이 컴포넌트의 생명주기에 맞춰 로직을 실행할 수 있게 되었다.
+
+- 비즈니스 로직 재사용
+- 작은 단위로 코드 분할 테스트 용이
+- 사이드 이펙트와 상태를 관심사에 맞게 분리
+
+# useState
+
+**리액트 함수 컴포넌트에서 상태(status)를 관리**하기 위해 useState 훅을 활용할 수 있다.
+useState 훅을 사용하면 함수형 컴포넌트에서도 상태를 유지하고, 이 **상태값이 업데이트 될 때마다 컴포넌트가 자동으로 리렌더링** 된다.
+
+### useState는 무엇을 반환하나
+
+React의 useState는 다음 두 가지를 반환한다.
+
+```ts
+const [state, setState] = useState(initialValue);
+```
+
+- state: 현재 렌더링 시점의 상태값 (즉, 화면에 보이는 값)
+- setState: 상태를 바꾸도록 React에게 **요청(scheduling)** 하는 함수
+
+React는 함수형 컴포넌트가 한 번 렌더링될 때마다 고정된 state 스냅샷을 사용한다.
+즉, setState()를 호출해도 그 자리에서 state가 즉시 상태를 바꾸지 않는다.
+
+예시를 통해 이해해보자.
+
+```ts
+const [count, setCount] = useState(0);
+
+function handleClick() {
+  setCount(count + 1);
+  console.log(count); // 여전히 0, 바로 바뀌지 않음
+}
+```
+
+- setCount(count + 1)을 실행하면 React가 “이 컴포넌트를 다시 렌더링해야겠다” 하고 **업데이트를 예약(scheduling)** 한다.
+  → 실제로 count가 변경된 상태는 “다음 렌더링 때” 반영된다. 그래서 **React의 상태 업데이트는 비동기적(asynchronous) 으로 작동**한다.
+
+이 비동기적 특성 때문에, 이전 상태를 기준으로 새 상태를 계산해야 하는 경우
+`(prevState) => newState` 형태를 써야 정확한 결과를 얻는다.
+
+```ts
+setCount((prev) => prev + 1);
+setCount((prev) => prev + 1);
+setCount((prev) => prev + 1);
+// 결과적으로 count가 +3이 됨
+```
+
+### 실제 useState의 튜플을 살펴보자
+
+```ts
+function useState<S>(
+  initialState: S | (() => S),
+): [S, Dispatch<SetStateAction<S>>];
+
+type Dispatch<A> = (value: A) => void;
+type SetStateAction<S> = S | ((prevState: S) => S);
+```
+
+- useState가 반환하는 튜플의 첫번째 요소는 **현재 상태값**으로, 제네릭으로 지정한 S 타입이다.
+- 두번째 요소는 **컴포넌트에서 상태를 업데이트할 수 있는 Dispatch의 함수**이다.
+- Dispatch 함수의 제네릭으로 지정한 `SetStateAction`에는 useState로 관리할 상태 타입인 S 또는 이전 상태 값을 받아 **새로운 상태를 반환하는 함수**인 `(prevState: S) => S)`가 들어갈 수 있다.
+
+이처럼 **함수형 업데이트**를 사용하면 실제로 비동기적으로 동작하는 상태 업데이트를 **이전 상태값을 ‘동기적으로 참조’해서 계산**할 수 있다.
+
+> 💡 useState의 사용팁: 하나의 컴포넌트 안에 useState를 여러 개 쓸 수 있다. 그런데 useState가 많다는건 컴포넌트의 역할이 크다는 뜻이다. 즉, 의존되는 컴포넌트가 많은 것이기 때문에 수정할 필요가 있을 수 있다.
+
+# useEffect
+
+useEffect는 **렌더링 이후 리액트 함수 컴포넌트에 어떤 일을 수행**해야 하는지 알려주기 위해 등록하는 함수이다. DependencyList라는 의존성 배열을 사용한다.
+
+### useEffect 타입 정의를 살펴보자
+
+```ts
+function useEffect(effect: EffectCallback, deps?: DependencyList): void;
+
+type DependencyList = readonly unknown[];
+type EffectCallback = () => void | Destructor;
+```
+
+#### EffectCallback
+
+- 첫번째 인자이자 effect의 타입인 **EffectCallback**은 **Destructor를 반환하거나 아무것도 반환하지 않는 함수**이다.
+- Promise 타입은 반환하지 않으므로 **useEffect의 콜백함수에는 비동기 함수가 들어갈 수 없다**. 비동기 함수를 호출한다면 경쟁 상태를 불러일으킬 수도 있다.
+
+#### deps
+
+- 두번째 인자인 **deps는 옵셔널하게 제공되고 effect가 수행되기 위한 조건을 나열**한다.
+- deps가 변경되었는지를 **얕은 비교**로만 판단하기 때문에, 실제 객체 값이 바뀌지 않았더라도 객체의 참조 값이 변경되면 콜백 함수가 실행된다.
+
+  ```ts
+  type SomeObject = {
+    name: string;
+    id: string;
+  };
+  interface LabelProps {
+    value: SomeObject;
+  }
+
+  const Label: React.FC<LabelProps> = ({ value }) => {
+    useEffect(() => {
+      // value.name과 value.id를 사용해서 작업한다
+    }, [value]);
+  };
+  ```
+
+  → 부모에서 받은 인자를 직접 deps로 작성한 경우, 원치 않는 렌더링이 발생할 수 있다. 이를 방지하기 위해 **실제 사용되는 값을 useEffect의 deps로 사용**해야 한다.
+
+  ```ts
+  const Label: React.FC<LabelProps> = ({ value }) => {
+    useEffect(() => {
+      // value.name과 value.id 대신 name, id를 직접 사용한다
+    }, [value.name]);
+  };
+  ```
+
+이처럼 useEffect는 Destructor를 반환하는데 이것은 **마운트가 해제될 때 실행하는 함수**이다.
+
+- deps가 빈배열일 때는 useEffect의 콜백 함수는 컴포넌트가 처음 렌더링될 때만 실행되고, Destructor(클린업 함수)는 컴포넌트가 마운트 해제될 때 실행된다.
+- deps 배열이 있다면, 배열 값이 변경될 때마다 Destructor가 실행된다.
+
+### 비동기로 처리되는 useEffect
+
+useEffect도 마찬가지로 **비동기로 동작하기 때문에 선언을 먼저 해도 레이아웃 배치와 화면 렌더링이 모두 완료된 후에 실행**된다.
+그런데 만약 name을 지정하는 setName이 오랜 시간이 걸린 후에 실행된다면?
+→ 사용자는 빈 이름을 오랫동안 보고 있어야 할 것이다.
+
+이런 문제를 해결하기 위해 useLayoutEffect 훅을 사용할 수 있다.
+
+### 동기적으로 처리되는 useLayoutEffect
+
+useLayoutEffect는 **화면이 렌더링 되기 전에 콜백 함수를 실행**한다.
+useEffect는 비동기로 동작해서 화면 업데이트를 방해하지 않지만, **동기적인 방식**이 필요하다면 **useLayoutEffect**를 사용하면 된다.
+
+> 💡 useEffect의 사용팁: useEffect내의 deps를 올바르게 명시하지 않아서 발생하는 사이드 이펙을 해결하는 것이 더 많은 비용이 발생할 수 있다. 따라서 사용하는 방식을 올바르게 익혀두도록 하자. (useEffect 사용을 지양하는 방법도 있음)
+
+# useRef
+
+useRef로 관리되는 **변수는 값이 바뀌어도 값을 기억하고 있어 재렌더링이 발생하지 않는다**.
+
+```ts
+const ref = useRef(initialValue);
+```
+
+- React는 ref를 렌더링 간에도 “**같은 객체로 유지**”시켜준다.
+- 즉, `ref.current` 안의 값은 렌더링 사이에서도 사라지지 않고 유지된다.
+
+## useState와 useRef 차이
+
+| 구분               | `useState`       | `useRef`                           |
+| ------------------ | ---------------- | ---------------------------------- |
+| 값 변경 시 렌더링? | 다시 렌더링됨    | 렌더링 안 됨                       |
+| 언제 읽을 수 있나? | 다음 렌더 후에   | 즉시 읽을 수 있음                  |
+| 주 사용 목적       | 화면 상태(UI 값) | 렌더링과 무관한 값, DOM, 타이머 등 |
+
+### 값을 보존하는 상자
+
+`useRef`는 `useState`와 다르게 **렌더링과 무관한 값을 기억해야 할 때 사용**된다.
+
+ex)
+
+- **이전 상태 기억하기**
+
+```ts
+const prevValue = useRef<number>();
+useEffect(() => {
+  prevValue.current = count; // 이전 값 저장
+}, [count]);
+```
+
+- **타이머 ID 저장하기**
+
+```ts
+const timeoutId = useRef<number>();
+timeoutId.current = window.setTimeout(...);
+```
+
+- **렌더링 횟수 카운트**
+
+```ts
+const renderCount = useRef(0);
+renderCount.current += 1;
+console.log("렌더 횟수:", renderCount.current);
+```
+
+### DOM 요소에 접근할 때 사용
+
+React는 기본적으로 “선언적 UI” 방식이다.
+직접 DOM을 조작하는 대신, 상태(state)가 바뀌면 React가 알아서 DOM을 업데이트한다.
+그런데 특정 상황에서는 React의 자동 업데이트보다 **더 직접적인 제어**가 필요할 때가 있다.
+이럴 때 **“실제 DOM 노드에 접근”** 해야 한다.
+
+`<input />` 요소에 **foucs를 설정**하거나 특정 컴포넌트의 위치로 스크롤 하는 등의 **DOM요소에 직접 접근**해야 할 때 사용할 수 있다.
+
+```ts
+function SearchInput() {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // 컴포넌트가 마운트되면 자동 포커스
+    inputRef.current?.focus();
+  }, []);
+
+  return <input ref={inputRef} placeholder="검색어 입력" />;
+}
+```
+
+- React가 `<input>` 엘리먼트를 렌더링
+- 해당 DOM 요소를 `inputRef.current`에 저장
+- 이후 직접 `inputRef.current.focus()` 호출
+
+→ React가 대신 해줄 수 없는, “DOM API 호출” (focus, scroll, measure 등) 을 직접 수행할 수 있게 된다.
+
+### DOM 접근이 필요한 경우
+
+| 상황                     | 사용하는 이유                                               |
+| ------------------------ | ----------------------------------------------------------- |
+| **입력창 포커스**        | 자동 focus(), blur() 제어                                   |
+| **스크롤 제어**          | 특정 위치로 scrollIntoView()                                |
+| **요소 크기/좌표 측정**  | `getBoundingClientRect()` 로 위치 계산                      |
+| **캔버스/비디오 제어**   | `<canvas>`, `<video>` 의 내부 API 직접 제어                 |
+| **외부 라이브러리 연동** | chart.js, mapbox 등 React 외부 DOM이 필요한 라이브러리 접근 |
+
+> 일반적인 경우에는 DOM에 직접 접근하는 것은 권장하지 않는다.

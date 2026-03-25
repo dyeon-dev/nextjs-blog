@@ -10,7 +10,7 @@ export default function TocBanner({ headings }) {
         >
           목차
         </p>
-        <ul id="toc-content" className="mt-2 gap-2 flex flex-col text-md">
+        <ul id="toc-content" className="mt-2 gap-2 flex flex-col text-md max-h-[70vh] overflow-hidden hover:overflow-y-auto pr-2">
           {headings.map((heading, index) => {
             const slug = slugify(heading.text);
             return (
