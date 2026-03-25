@@ -14,7 +14,14 @@ export default function TocBanner({ headings }) {
           {headings.map((heading, index) => {
             const slug = slugify(heading.text);
             return (
-              <li key={index} className={`ml-${heading.level}`}>
+              <li key={index} className={{
+                1: "ml-0",
+                2: "ml-2",
+                3: "ml-4",
+                4: "ml-6",
+                5: "ml-8",
+                6: "ml-10",
+              }[heading.level] || "ml-0"}>
                 <a
                   href={`#${slug}`}
                   className="block py-1 px-2 rounded-lg transition-all duration-200 ease-in-out 
