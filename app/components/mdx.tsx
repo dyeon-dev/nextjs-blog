@@ -48,7 +48,9 @@ function CustomLink(props) {
 }
 
 function RoundedImage(props) {
-  return <Image alt={props.alt} className="rounded-lg" {...props} />;
+  const srcStr = typeof props.src === "string" ? props.src : props.src?.src;
+  const isGif = srcStr && srcStr.toLowerCase().endsWith(".gif");
+  return <Image alt={props.alt} className="rounded-lg" unoptimized={isGif} {...props} />;
 }
 
 function Code({ children, ...props }) {
