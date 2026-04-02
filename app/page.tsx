@@ -4,7 +4,7 @@ export default function Page() {
   return (
     <section className="mt-16">
       <h1 className="mb-8 text-2xl font-semibold tracking-tighter">
-        DaYeonKim
+        FullStack Web Developer
       </h1>
       <p className="mb-4">
         📌 '왜?'라는 질문을 통해 <strong>근거 있는 설계</strong>를 지향합니다.
@@ -18,7 +18,7 @@ export default function Page() {
 비효율적인 프로세스를 점진적으로 개선해 나가는 것을 즐깁니다.</p>
 
       <h1 className="mt-8 text-xl font-semibold tracking-tighter">Skills</h1>
-      <p className="mt-4">{`React, TypeScript, React-Query, NestJS, MySQL, MongoDB, Node.js`}</p>
+      <p className="mt-4">{`React, TypeScript, React-Query, Node.js, NestJS, MySQL, MongoDB`}</p>
 
       <div className="my-4">
         <BlogPosts />

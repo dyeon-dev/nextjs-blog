@@ -34,7 +34,8 @@ export default function Footer() {
           <a
             className="flex items-center transition-all hover:text-neutral-800 dark:hover:text-neutral-100"
             rel="noopener noreferrer"
-            href="https://drive.google.com/file/d/1-c7N7FzXDdGdA5h5EZoABfRv3ywe9zzt/view?usp=sharing"
+            href=""
+            // href="https://drive.google.com/file/d/1-c7N7FzXDdGdA5h5EZoABfRv3ywe9zzt/view?usp=sharing"
           >
             <ArrowIcon />
             <p className="ml-2 h-7">portfolio</p>
