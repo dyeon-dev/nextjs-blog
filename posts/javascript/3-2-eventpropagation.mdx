@@ -1,0 +1,261 @@
+---
+title: "이벤트 전파(Event Propagation)와 이벤트 위임(Event Delegation)"
+publishedAt: "2025-08-21"
+summary: "DOM 트리에서 이벤트가 전파되는 캡처링과 버블링 단계를 이해하고, 이를 활용해 성능을 개선하는 이벤트 위임 패턴과 React에서의 활용법"
+---
+
+# 이벤트 전파
+
+DOM 트리 상에 존재하는 DOM 요소 노드에서 발생한 이벤트는 DOM 트리를 통해 전파된다.
+이를 **이벤트 전파(Event Propagation)** 라고 한다.
+
+## 이벤트 전파 방식
+
+![](https://velog.velcdn.com/images/dyeon-dev/post/54e924d9-215f-4413-a870-a38bc82abbdc/image.png)
+
+- **캡처링 단계(capturing phase)** : 이벤트가 상위 요소에서 하위 요소 방향으로 전파
+- **타깃 단계(target phase)** : 이벤트가 이벤트 타깃에 도달
+- **버블링 단계(bubbling phase)** : 이벤트가 하위 요소에서 상위 요소 방향으로 전파
+
+```html
+<html>
+  <body>
+      <ul id="fruits">
+        <li id="apple">Apple</li>
+        <li id="banana">Banana</li>
+        <li id="orange">Orange</li>
+      </ul>
+      <script>
+        const $fruits = document.getElementById('fruits');
+
+        // 하위 요소인 li를 클릭한 경우
+        $fruits.addEventListener('click', e => {
+          console.log(`이벤트 단계: ${e.eventPhase}`); // 3: 버블링 단계
+          console.log(`이벤트 타깃: ${e.target}`); // [object HTMLLIElement]
+          console.log(`커런트 타깃: ${e.currentTarget}`); // [object HTMLUListElement]
+        })
+  </body>
+<html />
+```
+
+ul 요소의 두 번째 자식 요소인 li 요소를 클릭하면 클릭 이벤트가 발생한다. 이때 생성된 이벤트 객체는 이벤트를 발생시킨 DOM 요소인 **이벤트 타깃을 중심으로 DOM 트리를 통해 전파**된다.
+이벤트 전파는 이벤트 객체가 전파되는 방향에 따라 3단계로 구분할 수 있다.
+
+1. li 요소를 클릭하면 이벤트가 발생하여 클릭 이벤트 객체가 생성되고 클릭된 **li 요소가 이벤트 타깃**이 된다.
+2. 이때 클릭 이벤트 객체는 window에서 시작해서 이벤트 타깃 방향으로 전파된다. -> **이벤트 캡처링 단계**
+3. 이후 이벤트 객체는 이벤트를 발생시킨 이벤트 타깃에 도달한다. -> **타깃 단계**
+4. 이후 이벤트 객체는 이벤트 타깃에서 시작해서 window 방향으로 전파된다. -> **이벤트 버블링 단계**
+
+HTML 요소를 클릭하면, 그 이벤트가 자식 → 부모 → 조상 방향으로 거품처럼 올라간다.
+
+> 어트리뷰트/프로퍼티 방식으로 등록한 이벤트 핸들러는 타킷, 버블링 단계만 캐치 가능
+
+> addEventListener 메서드 방식으로 등록한 이벤트 핸들러는 타깃, 버블링, 캡처링 단계까지 캐치 가능 (addEventListener 메서드의 3번째 인수로 true를 전달해야 함)
+
+이벤트는 이벤트를 발생시킨 이벤트 타깃은 물론 상위 DOM 요소에서도 캐치할 수 있다.
+즉, DOM 트리를 통해 전파되는 경로에 위치한 모든 DOM 요소애서 캐치할 수 있다.
+
+대부분의 이벤트는 캡처링과 버블링을 통해 전파된다. 하지만 다음 이벤트는 버블링을 통해 전파되지 않는다.
+따라서 이벤트 타깃의 상위 요소에서 이벤트를 캐치하려면 캡처링 단계의 이벤트를 캐치해야 한다. 대체할 수 있는 이벤트가 존재하지만, 캡처링 단계에서 이벤트를 캐치해야 할 경우는 거의 없다.
+
+- 포커스 이벤트: focus/blur
+- 리소스 이벤트: load/unload/abort/error
+- 마우스 이벤트: mouseenter/mouseleave
+
+### 캡처링과 버블링 이벤트 핸들러가 혼용되는 경우
+
+캡처링 단계의 이벤트와 버블링 단계의 이벤트를 캐치하는 이벤트 핸들러가 혼용되는 경우를 보며 어떻게 이벤트가 흘러가는지 파악해보자.
+
+```
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+    <p>버블링과 캡처링 이벤트 <button>버튼</button></p>
+    <script>
+        // 버블링 단계의 이벤트 캐치
+        document.body.addEventListener('click', () => {
+            console.log('3')
+        });
+
+        // 캡처링 단계의 이벤트 캐치
+        document.querySelector('p').addEventListener('click', () => {
+            console.log('1')
+        }, true);
+
+        // 타깃 단계의 이벤트 캐치
+        document.querySelector('button').addEventListener('click', () => {
+            console.log('2')
+        });
+    </script>
+</body>
+</html>
+```
+
+- `body` 요소는 버블링 단계만 캐치
+- `p` 요소는 캡처링 단계만 캐치
+
+**1. `button` 요소에서 클릭 이벤트 발생한 경우**
+
+- 캡처링 - 타깃 - 버블링 단계로 전파되므로 먼저 캡처링 단계를 캐치하는 `p` 요소의 이벤트 핸들러가 호출되고, 그 후 버블링 단계의 이벤트를 캐치하는 `body` 요소의 이벤트 핸들러가 순차적으로 호출된다.
+- 1-2-3 출력
+
+**2. `p` 요소에서 클릭 이벤트 발생한 경우**
+
+- 캡처링 단계를 캐치하는 `p` 요소의 이벤트 핸들러가 호출되고, 그 후 버블링 단계의 이벤트를 캐치하는 `body` 요소의 이벤트 핸들러가 순차적으로 호출된다.
+- 1-3 출력
+
+# 이벤트 위임
+
+이벤트 위임(event delegation)은 여러 개의 하위 DOM 요소에 각각 이벤트 핸들러를 등록하는 대신 하나의 상위 DOM 요소에 이벤트 핸들러를 등록하는 방법을 말한다.
+
+이벤트 전파에서도 살펴본 것처럼 이벤트는 이벤트 타깃은 물론 상위 DOM 요소에서도 캐치할 수 있다. 이벤트 위임을 통해 상위 DOM 요소에 이벤트 핸들러를 등록하면 여러 개의 하위 DOM 요소에 이벤트 핸들러를 등록할 필요가 없다.
+
+위임 없는 상태의 비효율적인 코드이다.
+
+```
+// li가 100개면 리스너도 100개
+document.querySelectorAll('li').forEach(li => {
+  li.addEventListener('click', (e) => {
+    console.log(e.target.textContent);
+  });
+});
+```
+
+이벤트 위임을 사용했을 때의 코드이다.
+
+```
+// 부모 하나에만 리스너 1개
+document.getElementById('list').addEventListener('click', (e) => {
+  if (e.target.tagName === 'LI') { // 실제로 클릭된 요소 확인
+    console.log(e.target.textContent);
+  }
+});
+```
+
+### 왜 쓰나요?
+
+1. 성능 — 리스너 수가 줄어 메모리를 아낀다.
+2. 동적 요소 처리 — 나중에 추가된 요소도 자동으로 처리된다.
+
+만약 개별 리스너 방식이었다면, 새로 추가된 `<li>`에는 리스너가 없어서 클릭이 동작하지 않는다.
+
+## React에서의 이벤트 위임
+
+React는 내부적으로 이벤트 위임을 자동으로 적용하기 때문에 직접 구현할 필요가 없다.
+
+```
+<li onClick={handleClick}>항목 1</li>
+<li onClick={handleClick}>항목 2</li>
+<li onClick={handleClick}>항목 3</li>
+```
+
+이렇게 써도 실제로 각 `<li>`에 리스너가 붙는 게 아니라, React가 루트 요소 하나에 모아서 처리한다.
+
+### React에서 직접 위임을 쓰는 경우
+
+드물지만, React 외부 DOM을 다룰 때는 직접 구현하기도 한다.
+
+> ex) useEffect 안에서 직접 리스너 등록
+
+```
+useEffect(() => {
+  const list = document.getElementById('list');
+
+  const handleClick = (e) => {
+    if (e.target.tagName === 'LI') {
+      console.log(e.target.textContent);
+    }
+  };
+
+  list.addEventListener('click', handleClick);
+
+  // 클린업 필수!
+  return () => list.removeEventListener('click', handleClick);
+}, []);
+```
+
+이처럼 useEffect 안에서 직접 DOM을 조작하면 바닐라 JS와 동일하게 직접 구현이 필요하다.
+
+하지만 일반적인 JSX 이벤트 핸들러는 React가 위임을 자동 처리하기 때문에 신경 쓸 필요 없다.
+
+## 이벤트 위임 활용하는법
+
+**1. 대용량 리스트/테이블**
+
+수백~수천 개의 행이 있는 테이블에서 각 행마다 버튼이 있는 경우이다.
+
+```
+// ❌ 행마다 리스너 3개씩 적용하면 비효율적이다
+{rows.map(row => (
+  <tr key={row.id}>
+    <td>{row.name}</td>
+    <td>
+      <button onClick={() => handleEdit(row.id)}>수정</button>
+      <button onClick={() => handleDelete(row.id)}>삭제</button>
+      <button onClick={() => handleView(row.id)}>보기</button>
+    </td>
+  </tr>
+))}
+
+// ✅ 부모에서 한 번에 처리하면 효율적이다
+<tbody onClick={(e) => {
+  const btn = e.target.closest('button'); // 클릭된 버튼 찾기
+  if (!btn) return;
+
+  const id = btn.closest('tr').dataset.id; // 행의 id 가져오기
+  const action = btn.dataset.action;       // 어떤 버튼인지 확인
+
+  if (action === 'edit') handleEdit(id);
+  if (action === 'delete') handleDelete(id);
+  if (action === 'view') handleView(id);
+}}>
+  {rows.map(row => (
+    <tr key={row.id} data-id={row.id}>
+      <td>{row.name}</td>
+      <td>
+        <button data-action="edit">수정</button>
+        <button data-action="delete">삭제</button>
+        <button data-action="view">보기</button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+```
+
+`data-*` 속성으로 각 요소에 메타데이터를 심어두고, 부모에서 꺼내 쓰는 패턴을 익혀두자!
+
+**2. 동적으로 추가되는 UI 컴포넌트**
+
+댓글, 태그 입력, 할 일 목록처럼 사용자가 항목을 계속 추가하는 경우이다.
+
+```
+// 태그 입력 컴포넌트 예시
+<div className="tag-container" onClick={(e) => {
+  // x 버튼 클릭 시 해당 태그 삭제
+  if (e.target.classList.contains('tag-remove')) {
+    const tag = e.target.closest('.tag').dataset.value;
+    removeTag(tag);
+  }
+}}>
+  {tags.map(tag => (
+    <span key={tag} className="tag" data-value={tag}>
+      {tag}
+      <button className="tag-remove">×</button>
+    </span>
+  ))}
+</div>
+```
+
+**3. 가상 스크롤 (Virtual Scroll)**
+
+100만 개 데이터를 렌더링할 수 없으니, 화면에 보이는 것만 DOM에 그리는 기법이다. 이때 항목이 계속 교체되므로 이벤트 위임이 필수이다.
+
+직접 구현하기보다 `react-window`, `react-virtual` 같은 라이브러리를 쓰는데, 이 라이브러리들이 내부적으로 이벤트 위임을 활용한다.
+
+React를 쓴다면 대부분 자동으로 처리되지만, **data-\* 속성 + closest() 조합**은 실무에서 직접 쓸 일이 꽤 있으니 익혀두면 좋다.
+
+#### 참고자료
+
+- [이벤트 전파: 모던자바스크립트 book](https://ebook-product.kyobobook.co.kr/dig/epd/ebook/E000002928532)
