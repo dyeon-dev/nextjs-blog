@@ -53,9 +53,11 @@ function RoundedImage(props) {
   return <Image alt={props.alt} className="rounded-lg" unoptimized={isGif} {...props} />;
 }
 
-function Code({ children, ...props }) {
+function Code({ children, className, ...props }) {
   if (!children) return "";
-  let codeHTML = highlight(children);
+  
+  const isText = className === "language-text";
+
   return (
     <span
       style={{
@@ -64,7 +66,13 @@ function Code({ children, ...props }) {
         wordBreak: "break-word",
       }}
     >
-      <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />
+      {isText ? (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      ) : (
+        <code dangerouslySetInnerHTML={{ __html: highlight(children) }} className={className} {...props} />
+      )}
     </span>
   );
 }
